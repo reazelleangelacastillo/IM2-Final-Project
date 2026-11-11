@@ -1,0 +1,232 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: linear-gradient(110deg, #0a1f44 0%, #123a7a 48%, #3b82f6 100%);
+    color: #fff;
+}
+
+.split-container {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(110deg, #0a1f44 0%, #123a7a 48%, #3b82f6 100%);
+}
+
+.left-panel {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 52%;
+    min-width: 0;
+    min-height: 100vh;
+    height: 100vh;
+    padding: 8vh 4vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    background: linear-gradient(
+        100deg,
+        #0a1f44 0%,
+        rgba(18, 58, 122, 0.96) 76%,
+        rgba(18, 58, 122, 0.55) 100%
+    );
+    color: #fff;
+    text-align: center;
+}
+
+.brand-content {
+    width: 100%;
+    max-width: 540px;
+    transform: translate(-2vw, -3vh);
+}
+
+.brand-content h1 {
+    margin: 0;
+    font-size: clamp(1.8rem, 3.2vw, 2.8rem);
+    letter-spacing: -1px;
+    font-weight: 700;
+    white-space: nowrap;
+    -webkit-text-stroke: 0.5px currentColor;
+}
+
+.brand-content p {
+    margin: -4px 0 0;
+    color: rgba(245, 250, 255, 0.85);
+    font-size: clamp(0.75rem, 1.5vw, 1.3rem);
+    line-height: 1.5;
+    font-weight: 500;
+    font-style: italic;
+    white-space: nowrap;
+}
+
+.right-panel {
+    position: absolute;
+    z-index: 1;
+    inset: 0 0 0 42%;
+    overflow: hidden;
+}
+
+.diagonal-images {
+    position: absolute;
+    z-index: -1;
+    inset: -8% -10% -8% 0;
+    display: flex;
+    justify-content: center;
+    gap: clamp(12px, 2vw, 28px);
+    padding: 0 4%;
+    overflow: hidden;
+    transform: skewX(-20deg);
+    pointer-events: none;
+}
+
+.image-strip {
+    position: relative;
+    top: -2%;
+    width: 28%;
+    height: 108%;
+    overflow: hidden;
+    border-radius: 80px;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.22);
+}
+
+.image-strip img {
+    width: 200%;
+    height: 100%;
+    object-fit: cover;
+    transform: skewX(20deg) translateX(-25%);
+}
+
+.image-strip:nth-child(2) {
+    margin-top: 5vh;
+}
+
+.image-strip:nth-child(3) {
+    margin-top: 10vh;
+}
+
+.form-box {
+    width: 100%;
+    max-width: 620px;
+    margin: 28px auto 0;
+    padding: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    background: rgba(10, 31, 68, 0.72);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(10px);
+    transform: translate(-2vw, -3vh);
+}
+
+.about-box h1 {
+    margin-bottom: 22px;
+    color: #fff;
+    font-size: clamp(0.95rem, 2.2vw, 1.6rem);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.about-text-content p {
+    margin-bottom: 16px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 15px;
+    line-height: 1.75;
+}
+
+.about-text-content p:last-child {
+    margin-bottom: 0;
+}
+
+.back-btn {
+    position: absolute;
+    z-index: 2;
+    top: 28px;
+    left: 4vw;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.back-btn:hover {
+    transform: translateX(-2px);
+    background: rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 768px) {
+    .left-panel {
+        flex-basis: 100%;
+        min-height: 100vh;
+        height: 100vh;
+        padding: 8vh 9vw;
+        background: linear-gradient(
+            100deg,
+            rgba(10, 31, 68, 0.94),
+            rgba(18, 58, 122, 0.78)
+        );
+    }
+
+    .right-panel {
+        inset: 0;
+        background: rgba(10, 31, 68, 0.3);
+    }
+
+    .diagonal-images {
+        opacity: 0.48;
+    }
+
+}
+
+@media (max-width: 480px) {
+    .left-panel {
+        padding: 7vh 8vw;
+    }
+
+    .brand-content h1 {
+        font-size: 2.8rem;
+    }
+
+    .brand-content p {
+        font-size: 0.75rem;
+    }
+
+    .form-box {
+        padding: 24px 20px;
+    }
+
+    .brand-content,
+    .form-box {
+        transform: translate(-1vw, -2vh);
+    }
+
+    .about-text-content p {
+        font-size: 14px;
+    }
+
+    .back-btn {
+        left: 6vw;
+    }
+}

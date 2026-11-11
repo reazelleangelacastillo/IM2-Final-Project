@@ -1,0 +1,245 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #E5EDF8;
+    color: #333;
+}
+
+/* HEADER */
+
+.topbar {
+    background: linear-gradient(135deg, #003580, #001F5B 55%, #4169AE);
+    color: white;
+    padding: 18px 40px;
+    box-shadow: 0 12px 35px rgba(0, 53, 128, 0.22);
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.logo-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.logo-section h1 {
+    font-size: 2rem;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.eyebrow {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    opacity: 0.92;
+    font-weight: 700;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    text-decoration: none;
+    color: #fff;
+    font-weight: 700;
+
+    padding: 11px 18px;
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+
+    transition: background 0.2s ease,
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.back-btn .bi {
+    font-size: 1.05rem;
+}
+
+/* MAIN CONTAINER */
+
+.container {
+    padding: 40px;
+}
+
+/* SEARCH BAR */
+
+.search-box {
+    max-width: 500px;
+    margin: 0 auto 40px;
+    position: relative;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 14px 45px 14px 16px;
+
+    border: 2px solid #b8c9e3;
+    border-radius: 10px;
+
+    font-size: 15px;
+    outline: none;
+
+    transition: 0.2s ease;
+}
+
+.search-box input:focus {
+    border-color: #003580;
+    box-shadow: 0 0 10px rgba(0, 53, 128, 0.2);
+}
+
+.search-box i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #777;
+}
+
+/* BOOK GRID */
+
+.book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+}
+
+/* BOOK CARD */
+
+.book-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+
+    transition: transform 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+.book-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+}
+
+.book-icon {
+    width: 60px;
+    height: 60px;
+
+    background-color: #E5EDF8;
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 20px;
+}
+
+.book-icon i {
+    font-size: 28px;
+    color: #003580;
+}
+
+.book-card h2 {
+    color: #001F5B;
+    margin-bottom: 10px;
+    font-size: 1.4rem;
+}
+
+.subtitle {
+    color: #777;
+    margin-bottom: 20px;
+    min-height: 40px;
+}
+
+/* BOOK INFO */
+
+.book-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+/* STATUS */
+
+.status {
+    display: inline-block;
+
+    padding: 8px 14px;
+    border-radius: 30px;
+
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.status.available {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status.borrowed {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.status.reserved {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 768px) {
+
+    .topbar {
+        padding: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .container {
+        padding: 20px;
+    }
+
+    .book-card {
+        padding: 20px;
+    }
+
+    .logo-section h1 {
+        font-size: 1.7rem;
+    }
+
+    .search-box {
+        margin-bottom: 30px;
+    }
+}
