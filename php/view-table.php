@@ -3,7 +3,7 @@
 $host = "localhost";
 $user = "root";
 $password = "";
-$database = "queryshelf";
+$database = "booktrace";
 
 /* DATABASE CONNECTION */
 $conn = mysqli_connect($host, $user, $password, $database);

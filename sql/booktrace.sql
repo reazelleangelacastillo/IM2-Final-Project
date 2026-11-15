@@ -181,9 +181,12 @@ CREATE TABLE `books` (
   `pub_id` varchar(30) NOT NULL,
   `class_no` varchar(50) NOT NULL,
   `call_no` varchar(50) NOT NULL,
-  `ISBN` varchar(25) DEFAULT NULL,
+  `ISBN` varchar(25) NOT NULL CHECK (`ISBN` REGEXP '^ISBN-[A-Za-z0-9][A-Za-z0-9 ./-]*$'),
   `category` varchar(50) NOT NULL CHECK (`category` in ('Academic','Non-Academic')),
-  `audience_type` varchar(50) DEFAULT NULL
+  `audience_type` varchar(50) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `acquired_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -514,9 +517,12 @@ INSERT INTO `library_staff` (`libstaff_id`, `user_id`, `hire_date`, `duty_schedu
 --
 
 CREATE TABLE `periodicals` (
-  `ISSN` varchar(20) NOT NULL,
-  `pub_id` varchar(20) DEFAULT NULL,
-  `peridodic_type` varchar(100) NOT NULL
+  `ISSN` varchar(20) NOT NULL CHECK (`ISSN` REGEXP '^ISSN-[A-Za-z0-9][A-Za-z0-9 ./-]*$'),
+  `pub_id` varchar(20) NOT NULL,
+  `peridodic_type` varchar(100) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `acquired_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -822,13 +828,14 @@ INSERT INTO `pub copies` (`copy_id`, `pub_id`, `copy_number`, `status_id`) VALUE
 --
 
 CREATE TABLE `publication` (
-  `pub_id` varchar(20) NOT NULL,
+  `pub_id` varchar(20) NOT NULL CHECK (`pub_id` REGEXP '^PUB[0-9]+$'),
   `title` varchar(100) NOT NULL,
   `series` varchar(100) DEFAULT NULL,
   `edition` varchar(30) DEFAULT NULL,
   `date_published` date NOT NULL,
   `shelf_location` varchar(30) NOT NULL,
   `language_used` varchar(50) NOT NULL,
+  `publisher_id` varchar(30) DEFAULT NULL,
   `subtitle` varchar(255) DEFAULT NULL,
   `pages` int(11) NOT NULL,
   `copyright_date` int(11) NOT NULL,
@@ -977,6 +984,11 @@ INSERT INTO `publication` (`pub_id`, `title`, `series`, `edition`, `date_publish
 ('PUB6143', 'Routers', 'Technology Series', '2nd Edition', '2026-05-25', 'Shelf A1', 'English', 'Networking', 200, 2026, NULL, NULL),
 ('PUB8026', 'Routing & Routers', 'Technology Series', '2nd Edition', '2026-05-26', 'Shelf A1', '', '', 156, 2026, NULL, NULL),
 ('PUB8246', 'Routers', 'Technology Series', '2nd Edition', '2026-05-25', 'Shelf A1', 'English', 'Networking', 200, 2026, NULL, NULL);
+
+UPDATE `publication`
+SET `publisher_id` = CONCAT('PBL-', LPAD(CAST(SUBSTRING(`pub_id`, 4) AS UNSIGNED), 3, '0'))
+WHERE `pub_id` REGEXP '^PUB[0-9]{3}$'
+  AND CAST(SUBSTRING(`pub_id`, 4) AS UNSIGNED) BETWEEN 1 AND 130;
 
 -- --------------------------------------------------------
 
@@ -1221,7 +1233,11 @@ ALTER TABLE `author`
 -- Indexes for table `books`
 --
 ALTER TABLE `books`
+  ADD UNIQUE KEY `uq_books_pub_id` (`pub_id`),
   ADD UNIQUE KEY `ISBN` (`ISBN`),
+  ADD KEY `idx_books_created_at` (`created_at`),
+  ADD KEY `idx_books_updated_at` (`updated_at`),
+  ADD KEY `idx_books_acquired_at` (`acquired_at`),
   ADD KEY `books_ibfk_2` (`pub_id`);
 
 --
@@ -1270,6 +1286,10 @@ ALTER TABLE `library_staff`
 --
 ALTER TABLE `periodicals`
   ADD PRIMARY KEY (`ISSN`),
+  ADD UNIQUE KEY `uq_periodicals_pub_id` (`pub_id`),
+  ADD KEY `idx_periodicals_created_at` (`created_at`),
+  ADD KEY `idx_periodicals_updated_at` (`updated_at`),
+  ADD KEY `idx_periodicals_acquired_at` (`acquired_at`),
   ADD KEY `fk_periodicals_publication` (`pub_id`);
 
 --
@@ -1321,7 +1341,7 @@ ALTER TABLE `user`
 -- Constraints for table `books`
 --
 ALTER TABLE `books`
-  ADD CONSTRAINT `fk_books_publication` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`);
+  ADD CONSTRAINT `fk_books_publication_cascade` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `borrower`
@@ -1343,7 +1363,7 @@ ALTER TABLE `borrows`
 ALTER TABLE `fines`
   ADD CONSTRAINT `fk_fines_borrow` FOREIGN KEY (`borrow_id`) REFERENCES `borrows` (`borrow_id`),
   ADD CONSTRAINT `fk_fines_libstaff` FOREIGN KEY (`libstaff_id`) REFERENCES `library_staff` (`libstaff_id`),
-  ADD CONSTRAINT `fk_fines_publication` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`);
+  ADD CONSTRAINT `fk_fines_publication_cascade` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `library_staff`
@@ -1355,20 +1375,20 @@ ALTER TABLE `library_staff`
 -- Constraints for table `periodicals`
 --
 ALTER TABLE `periodicals`
-  ADD CONSTRAINT `fk_periodicals_publication` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`);
+  ADD CONSTRAINT `fk_periodicals_publication_cascade` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `pub author`
 --
 ALTER TABLE `pub author`
   ADD CONSTRAINT `fk_pubauthor_author` FOREIGN KEY (`author_id`) REFERENCES `author` (`author_id`),
-  ADD CONSTRAINT `fk_pubauthor_publication` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`);
+  ADD CONSTRAINT `fk_pubauthor_publication_cascade` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `pub copies`
 --
 ALTER TABLE `pub copies`
-  ADD CONSTRAINT `fk_pubcopies_publication` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`),
+  ADD CONSTRAINT `fk_pubcopies_publication_cascade` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_pubcopies_status` FOREIGN KEY (`status_id`) REFERENCES `status` (`status_id`);
 
 --

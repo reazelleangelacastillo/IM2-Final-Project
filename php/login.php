@@ -9,31 +9,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
 
-    // Check Librarian account first
     $stmt = $pdo->prepare('
         SELECT u.user_id, u.user_fname, u.user_lname, u.user_type,
-               l.librarian_pass AS operational_password
+               s.password AS operational_password
         FROM user u
-        LEFT JOIN librarian l ON u.user_id = l.user_id
-        WHERE u.email = ? AND u.user_type = ?
+        LEFT JOIN library_staff s ON u.user_id = s.user_id
+        WHERE u.email = ? AND u.user_type IN (?, ?)
     ');
 
-    $stmt->execute([$email, 'Librarian']);
+    $stmt->execute([$email, 'Librarian', 'Library Clerk']);
     $user = $stmt->fetch();
-
-    // If not Librarian, check Library Clerk
-    if (!$user) {
-        $stmt = $pdo->prepare('
-            SELECT u.user_id, u.user_fname, u.user_lname, u.user_type,
-                   c.libclerk_pass AS operational_password
-            FROM user u
-            LEFT JOIN `library clerk` c ON u.user_id = c.user_id
-            WHERE u.email = ? AND u.user_type = ?
-        ');
-
-        $stmt->execute([$email, 'Library Clerk']);
-        $user = $stmt->fetch();
-    }
 
     if ($user) {
         if ($password === $user['operational_password']) {

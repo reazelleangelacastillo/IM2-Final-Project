@@ -1,6 +1,6 @@
 <?php
 $host = 'localhost';
-$db   = 'queryshelf';
+$db   = 'booktrace';
 $user = 'root';  
 $pass = '';
 $charset = 'utf8mb4';
