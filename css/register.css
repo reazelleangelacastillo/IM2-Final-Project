@@ -1,0 +1,66 @@
+html,
+body {
+    overflow-y: auto;
+}
+
+.form-box.login-box.register-box {
+    max-width: 620px;
+    padding: 24px 28px;
+}
+
+.register-box > p {
+    margin-bottom: 18px;
+}
+
+#registerForm {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    column-gap: 14px;
+}
+
+#registerForm .input-group-container {
+    grid-column: span 2;
+    margin-bottom: 14px;
+}
+
+#registerForm .input-group-container.half {
+    grid-column: span 3;
+}
+
+#registerForm .input-group-container.full,
+#registerForm .error-msg,
+#registerForm .success-msg,
+#registerForm button {
+    grid-column: 1 / -1;
+}
+
+#registerForm .form-input-custom {
+    padding: 10px 12px;
+    font-size: 15px;
+}
+
+.success-msg {
+    color: #166534 !important;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 500;
+    box-sizing: border-box;
+}
+
+.success-msg a {
+    color: #003580;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    #registerForm .input-group-container,
+    #registerForm .input-group-container.half {
+        grid-column: 1 / -1;
+    }
+}
