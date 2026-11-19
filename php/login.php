@@ -29,13 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_name'] = $user['user_fname'] . ' ' . $user['user_lname'];
             $_SESSION['user_type'] = $user['user_type'];
 
-            if ($user['user_type'] === 'Librarian') {
-                header('Location: librarian_dashboard.php');
-                exit;
-            } elseif ($user['user_type'] === 'Library Clerk') {
-                header('Location: ../libclerk_dashboard.php');
-                exit;
-            }
+            header('Location: librarian_dashboard.php');
+            exit;
 
         } else {
             $error = "Invalid password.";
