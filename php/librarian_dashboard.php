@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
 $host = "localhost";
 $user = "root";
 $password = "";
@@ -792,6 +793,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Librarian Dashboard | QueryShelf</title>
     <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261115-9">
+    <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -799,33 +801,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
 </head>
 <body>
 
-<header class="topbar">
-    <div class="brand-navigation">
-        <div class="logo-section">
-            <h1>BookTrace</h1>
-            <p class="eyebrow">Librarian Panel</p>
-        </div>
-        <nav class="table-navigation" aria-label="Catalog tables">
-            <a href="#books-table">Books</a>
-            <a href="#periodicals-table">Periodicals</a>
-        </nav>
-    </div>
-
-    <div class="header-actions">
-        <a href="../index.php" class="back-btn">
-            <i class="bi bi-arrow-left"></i>
-            Back
-        </a>
-        <a href="reports.php" class="back-btn reports-btn">
-            <i class="bi bi-file-earmark-bar-graph"></i>
-            Reports
-        </a>
-        <a href="add_transaction.php" class="back-btn">
-            <i class="bi bi-arrow-left-right"></i>
-            Add Transactions
-        </a>
-    </div>
-</header>
+<?php require __DIR__ . '/includes/header.php'; ?>
 
 <main class="dashboard-container">
 
