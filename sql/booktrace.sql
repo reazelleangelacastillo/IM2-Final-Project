@@ -1474,6 +1474,247 @@ ALTER TABLE `status` ADD CONSTRAINT `chk_status_type`
   CHECK (`status_type` in ('Available','Borrowed','Under Maintenance'));
 COMMIT;
 
+DELIMITER $$
+
+CREATE FUNCTION `fn_hours_late`(p_due DATETIME, p_end DATETIME) RETURNS INT
+DETERMINISTIC
+BEGIN
+  IF p_due IS NULL OR p_end IS NULL OR p_end <= p_due THEN
+    RETURN 0;
+  END IF;
+  RETURN FLOOR(TIMESTAMPDIFF(SECOND, p_due, p_end) / 3600);
+END$$
+
+CREATE FUNCTION `fn_calc_fine`(p_due DATETIME, p_end DATETIME, p_rate DECIMAL(10,2)) RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+  RETURN fn_hours_late(p_due, p_end) * p_rate;
+END$$
+
+DELIMITER ;
+
+CREATE VIEW `v_overdue_borrows` AS
+SELECT
+  b.`borrow_id` AS `transaction_id`,
+  br.`borrower_id`,
+  CONCAT(u.`user_fname`, ' ', u.`user_lname`) AS `borrower_name`,
+  b.`copy_id`,
+  p.`title`,
+  b.`due_date`,
+  fn_hours_late(b.`due_date`, NOW()) AS `hours_late`,
+  fn_calc_fine(b.`due_date`, NOW(), bp.`fine_rate_per_hour`) AS `live_fine`
+FROM `borrows` b
+JOIN `borrower` br ON br.`user_id` = b.`user_id`
+JOIN `user` u ON u.`user_id` = b.`user_id`
+JOIN `pub copies` pc ON pc.`copy_id` = b.`copy_id`
+JOIN `publication` p ON p.`pub_id` = pc.`pub_id`
+JOIN `borrowing_policy` bp ON bp.`policy_id` = b.`policy_id`
+WHERE b.`date_returned` IS NULL AND b.`due_date` < NOW();
+
+CREATE VIEW `v_borrower_status` AS
+SELECT
+  br.`borrower_id`,
+  br.`user_id`,
+  CONCAT(u.`user_fname`, ' ', u.`user_lname`) AS `borrower_name`,
+  br.`borrower_type`,
+  (SELECT COUNT(*) FROM `borrows` b
+    WHERE b.`user_id` = br.`user_id` AND b.`date_returned` IS NULL) AS `active_borrows`,
+  (SELECT COUNT(*) FROM `borrows` b
+    WHERE b.`user_id` = br.`user_id` AND b.`date_returned` IS NULL AND b.`due_date` < NOW()) AS `overdue_count`,
+  (SELECT COALESCE(SUM(f.`amount`), 0) FROM `fines` f
+    JOIN `borrows` b ON b.`borrow_id` = f.`borrow_id`
+    WHERE b.`user_id` = br.`user_id` AND f.`status` = 'Unpaid') AS `unpaid_fine_total`
+FROM `borrower` br
+JOIN `user` u ON u.`user_id` = br.`user_id`;
+
+DELIMITER $$
+
+CREATE PROCEDURE `sp_borrow`(IN p_borrower_id VARCHAR(10), IN p_copy_id VARCHAR(20), IN p_libstaff_id VARCHAR(20))
+BEGIN
+  DECLARE v_user_id INT DEFAULT NULL;
+  DECLARE v_status_type VARCHAR(30) DEFAULT NULL;
+  DECLARE v_condition VARCHAR(50) DEFAULT NULL;
+  DECLARE v_unpaid DECIMAL(10,2) DEFAULT 0;
+  DECLARE v_overdue INT DEFAULT 0;
+  DECLARE v_active INT DEFAULT 0;
+  DECLARE v_policy VARCHAR(20) DEFAULT NULL;
+  DECLARE v_max INT DEFAULT 0;
+  DECLARE v_days INT DEFAULT 0;
+  DECLARE v_next INT DEFAULT 0;
+  DECLARE v_id VARCHAR(20);
+  DECLARE v_now DATETIME;
+  DECLARE v_due DATETIME;
+  DECLARE v_msg VARCHAR(255) DEFAULT NULL;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
+  START TRANSACTION;
+  SELECT `user_id` INTO v_user_id FROM `borrower` WHERE `borrower_id` = p_borrower_id;
+  IF v_user_id IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Borrower not found.';
+  END IF;
+  SELECT s.`status_type`, s.`condition` INTO v_status_type, v_condition
+    FROM `pub copies` pc JOIN `status` s ON s.`status_id` = pc.`status_id`
+    WHERE pc.`copy_id` = p_copy_id FOR UPDATE;
+  IF v_status_type IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Copy not found.';
+  END IF;
+  IF v_status_type <> 'Available' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Copy is not available.';
+  END IF;
+  IF v_condition = 'Damaged' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Copy is damaged and cannot be borrowed.';
+  END IF;
+  SELECT COALESCE(SUM(f.`amount`), 0) INTO v_unpaid
+    FROM `fines` f JOIN `borrows` b ON b.`borrow_id` = f.`borrow_id`
+    WHERE b.`user_id` = v_user_id AND f.`status` = 'Unpaid';
+  IF v_unpaid > 0 THEN
+    SET v_msg = CONCAT('Borrower has an unpaid fine of ', FORMAT(v_unpaid, 2), '.');
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_msg;
+  END IF;
+  SELECT COUNT(*) INTO v_overdue FROM `borrows`
+    WHERE `user_id` = v_user_id AND `date_returned` IS NULL AND `due_date` < NOW();
+  IF v_overdue > 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Borrower has an overdue book that has not been returned.';
+  END IF;
+  SELECT `policy_id`, `max_books_allowed`, `loan_duration_days` INTO v_policy, v_max, v_days
+    FROM `borrowing_policy` ORDER BY `policy_id` LIMIT 1;
+  SELECT COUNT(*) INTO v_active FROM `borrows`
+    WHERE `user_id` = v_user_id AND `date_returned` IS NULL;
+  IF v_active >= v_max THEN
+    SET v_msg = CONCAT('Borrower has reached the maximum of ', v_max, ' books.');
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_msg;
+  END IF;
+  SELECT COALESCE(MAX(CAST(SUBSTRING(`borrow_id`, 4) AS UNSIGNED)), 0) + 1 INTO v_next FROM `borrows` FOR UPDATE;
+  SET v_id = CONCAT('TRX', LPAD(v_next, 3, '0'));
+  SET v_now = NOW();
+  SET v_due = DATE_ADD(v_now, INTERVAL v_days DAY);
+  INSERT INTO `borrows` (`borrow_id`, `user_id`, `date_borrowed`, `date_returned`, `due_date`, `copy_id`, `policy_id`, `libstaff_id`)
+    VALUES (v_id, v_user_id, v_now, NULL, v_due, p_copy_id, v_policy, p_libstaff_id);
+  UPDATE `status` SET `status_type` = 'Borrowed'
+    WHERE `status_id` = (SELECT `status_id` FROM `pub copies` WHERE `copy_id` = p_copy_id);
+  COMMIT;
+  SELECT v_id AS `transaction_id`, v_due AS `due_date`;
+END$$
+
+CREATE PROCEDURE `sp_return`(IN p_borrow_id VARCHAR(20), IN p_libstaff_id VARCHAR(20))
+BEGIN
+  DECLARE v_copy VARCHAR(20) DEFAULT NULL;
+  DECLARE v_returned DATETIME DEFAULT NULL;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    SET @return_staff_id = NULL;
+    ROLLBACK;
+    RESIGNAL;
+  END;
+  START TRANSACTION;
+  SELECT `copy_id`, `date_returned` INTO v_copy, v_returned
+    FROM `borrows` WHERE `borrow_id` = p_borrow_id FOR UPDATE;
+  IF v_copy IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Transaction not found.';
+  END IF;
+  IF v_returned IS NOT NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Book was already returned.';
+  END IF;
+  SET @return_staff_id = p_libstaff_id;
+  UPDATE `borrows` SET `date_returned` = NOW() WHERE `borrow_id` = p_borrow_id;
+  UPDATE `status` SET `status_type` = 'Available'
+    WHERE `status_id` = (SELECT `status_id` FROM `pub copies` WHERE `copy_id` = v_copy);
+  SET @return_staff_id = NULL;
+  COMMIT;
+  SELECT b.`borrow_id` AS `transaction_id`, b.`date_returned`, f.`fine_id`, f.`hours_late`,
+         COALESCE(f.`amount`, 0) AS `fine_amount`
+    FROM `borrows` b LEFT JOIN `fines` f ON f.`borrow_id` = b.`borrow_id`
+    WHERE b.`borrow_id` = p_borrow_id;
+END$$
+
+CREATE PROCEDURE `sp_pay_fine`(IN p_fine_id VARCHAR(30))
+BEGIN
+  DECLARE v_status VARCHAR(10) DEFAULT NULL;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
+  START TRANSACTION;
+  SELECT `status` INTO v_status FROM `fines` WHERE `fine_id` = p_fine_id FOR UPDATE;
+  IF v_status IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Fine not found.';
+  END IF;
+  IF v_status = 'Paid' THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Fine is already paid.';
+  END IF;
+  UPDATE `fines` SET `status` = 'Paid', `date_paid` = NOW() WHERE `fine_id` = p_fine_id;
+  COMMIT;
+  SELECT `fine_id`, `status`, `date_paid` FROM `fines` WHERE `fine_id` = p_fine_id;
+END$$
+
+CREATE TRIGGER `trg_borrows_after_return` AFTER UPDATE ON `borrows`
+FOR EACH ROW
+BEGIN
+  DECLARE v_hours INT;
+  DECLARE v_rate DECIMAL(10,2);
+  DECLARE v_next INT;
+  IF OLD.`date_returned` IS NULL AND NEW.`date_returned` IS NOT NULL THEN
+    SET v_hours = fn_hours_late(NEW.`due_date`, NEW.`date_returned`);
+    IF v_hours >= 1 THEN
+      SELECT `fine_rate_per_hour` INTO v_rate FROM `borrowing_policy` WHERE `policy_id` = NEW.`policy_id`;
+      SELECT COALESCE(MAX(CAST(SUBSTRING(`fine_id`, 3) AS UNSIGNED)), 0) + 1 INTO v_next FROM `fines` FOR UPDATE;
+      INSERT INTO `fines` (`fine_id`, `libstaff_id`, `borrow_id`, `amount`, `hours_late`, `rate_applied`, `date_assessed`, `status`, `date_paid`)
+        VALUES (CONCAT('FN', LPAD(v_next, 3, '0')), COALESCE(@return_staff_id, NEW.`libstaff_id`), NEW.`borrow_id`,
+                fn_calc_fine(NEW.`due_date`, NEW.`date_returned`, v_rate), v_hours, v_rate, NOW(), 'Unpaid', NULL);
+    END IF;
+  END IF;
+END$$
+
+CREATE PROCEDURE `sp_register_borrower`(
+  IN p_fname VARCHAR(50), IN p_lname VARCHAR(50), IN p_mid VARCHAR(50), IN p_birth DATE,
+  IN p_gender VARCHAR(10), IN p_brgy VARCHAR(100), IN p_municipality VARCHAR(100),
+  IN p_province VARCHAR(100), IN p_email VARCHAR(100), IN p_category VARCHAR(30),
+  IN p_id_type VARCHAR(100), IN p_id_number VARCHAR(30))
+BEGIN
+  DECLARE v_exists INT DEFAULT 0;
+  DECLARE v_user_next INT DEFAULT 0;
+  DECLARE v_bor_next INT DEFAULT 0;
+  DECLARE v_borrower_id VARCHAR(10);
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
+  IF NULLIF(TRIM(p_fname), '') IS NULL OR NULLIF(TRIM(p_lname), '') IS NULL
+     OR p_birth IS NULL OR NULLIF(TRIM(p_gender), '') IS NULL
+     OR NULLIF(TRIM(p_category), '') IS NULL OR NULLIF(TRIM(p_id_type), '') IS NULL
+     OR NULLIF(TRIM(p_id_number), '') IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Required field missing.';
+  END IF;
+  IF p_category NOT IN ('Student', 'Teacher', 'Researcher', 'Community Resident', 'Other') THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid borrower category.';
+  END IF;
+  START TRANSACTION;
+  SELECT COUNT(*) INTO v_exists FROM `borrower`
+    WHERE `ID_type` = TRIM(p_id_type) AND `ID_number` = TRIM(p_id_number) FOR UPDATE;
+  IF v_exists > 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'A borrower with this ID type and number already exists.';
+  END IF;
+  SELECT COALESCE(MAX(`user_id`), 100000) + 1 INTO v_user_next FROM `user` FOR UPDATE;
+  SELECT COALESCE(MAX(CAST(SUBSTRING(`borrower_id`, 4) AS UNSIGNED)), 0) + 1 INTO v_bor_next FROM `borrower` FOR UPDATE;
+  SET v_borrower_id = CONCAT('BOR', LPAD(v_bor_next, 3, '0'));
+  INSERT INTO `user` (`user_id`, `user_fname`, `user_lname`, `user_midInit`, `birth_date`, `gender`, `email`,
+                      `user_type`, `user_brgy`, `user_municipality`, `user_province`)
+    VALUES (v_user_next, TRIM(p_fname), TRIM(p_lname), NULLIF(TRIM(p_mid), ''), p_birth, TRIM(p_gender),
+            NULLIF(TRIM(p_email), ''), 'Borrower', NULLIF(TRIM(p_brgy), ''),
+            NULLIF(TRIM(p_municipality), ''), NULLIF(TRIM(p_province), ''));
+  INSERT INTO `borrower` (`borrower_id`, `user_id`, `borrower_type`, `ID_type`, `ID_number`)
+    VALUES (v_borrower_id, v_user_next, p_category, TRIM(p_id_type), TRIM(p_id_number));
+  COMMIT;
+  SELECT v_borrower_id AS `borrower_id`;
+END$$
+
+DELIMITER ;
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
