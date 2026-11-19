@@ -566,12 +566,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $linked_records = mysqli_prepare($conn, "
                 SELECT
                     (SELECT COUNT(*) FROM books WHERE pub_id = ?) +
-                    (SELECT COUNT(*) FROM fines WHERE pub_id = ?) +
                     (SELECT COUNT(*) FROM periodicals WHERE pub_id = ?) +
                     (SELECT COUNT(*) FROM `pub author` WHERE pub_id = ?) +
                     (SELECT COUNT(*) FROM `pub copies` WHERE pub_id = ?)
             ");
-            mysqli_stmt_bind_param($linked_records, "sssss", $pub_id, $pub_id, $pub_id, $pub_id, $pub_id);
+            mysqli_stmt_bind_param($linked_records, "ssss", $pub_id, $pub_id, $pub_id, $pub_id);
             mysqli_stmt_execute($linked_records);
             mysqli_stmt_bind_result($linked_records, $linked_record_count);
             mysqli_stmt_fetch($linked_records);

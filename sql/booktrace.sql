@@ -181,7 +181,7 @@ CREATE TABLE `books` (
   `pub_id` varchar(30) NOT NULL,
   `class_no` varchar(50) NOT NULL,
   `call_no` varchar(50) NOT NULL,
-  `ISBN` varchar(25) NOT NULL CHECK (`ISBN` REGEXP '^ISBN-[A-Za-z0-9][A-Za-z0-9 ./-]*$'),
+  `ISBN` varchar(25) NOT NULL,
   `category` varchar(50) NOT NULL CHECK (`category` in ('Academic','Non-Academic')),
   `audience_type` varchar(50) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
@@ -304,7 +304,7 @@ INSERT INTO `books` (`pub_id`, `class_no`, `call_no`, `ISBN`, `category`, `audie
 CREATE TABLE `borrower` (
   `borrower_id` varchar(10) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `borrower_type` varchar(30) NOT NULL CHECK (`borrower_type` in ('Internal','External')),
+  `borrower_type` varchar(30) NOT NULL,
   `ID_type` varchar(100) DEFAULT NULL,
   `ID_number` varchar(30) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -382,8 +382,11 @@ CREATE TABLE `borrowing_policy` (
   `policy_id` varchar(20) NOT NULL,
   `max_books_allowed` int(11) NOT NULL,
   `loan_duration_days` int(11) NOT NULL,
-  `fine_rate_per_day` decimal(10,2) NOT NULL
+  `fine_rate_per_hour` decimal(10,2) NOT NULL DEFAULT 2.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO `borrowing_policy` (`policy_id`, `max_books_allowed`, `loan_duration_days`, `fine_rate_per_hour`) VALUES
+('POL001', 3, 7, 2.00);
 
 -- --------------------------------------------------------
 
@@ -396,9 +399,10 @@ CREATE TABLE `borrows` (
   `user_id` int(11) NOT NULL,
   `date_borrowed` datetime DEFAULT NULL,
   `date_returned` datetime DEFAULT NULL,
-  `due_date` date DEFAULT NULL,
+  `due_date` datetime DEFAULT NULL,
   `copy_id` varchar(20) DEFAULT NULL,
-  `policy_id` varchar(20) DEFAULT NULL
+  `policy_id` varchar(20) DEFAULT NULL,
+  `libstaff_id` varchar(20) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -475,16 +479,20 @@ CREATE TABLE `fines` (
   `libstaff_id` varchar(20) DEFAULT NULL,
   `borrow_id` varchar(20) NOT NULL,
   `amount` decimal(10,2) NOT NULL CHECK (`amount` >= 0.00),
-  `pub_id` varchar(20) NOT NULL
+  `hours_late` int(11) NOT NULL,
+  `rate_applied` decimal(10,2) NOT NULL,
+  `date_assessed` datetime NOT NULL,
+  `status` varchar(10) NOT NULL DEFAULT 'Unpaid' CHECK (`status` in ('Unpaid','Paid')),
+  `date_paid` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `fines`
 --
 
-INSERT INTO `fines` (`fine_id`, `libstaff_id`, `borrow_id`, `amount`, `pub_id`) VALUES
-('FN001', 'LIB001', 'BOR020', 5.00, 'PUB022'),
-('FN002', 'LIB001', 'BOR013', 10.00, 'PUB094');
+INSERT INTO `fines` (`fine_id`, `libstaff_id`, `borrow_id`, `amount`, `hours_late`, `rate_applied`, `date_assessed`, `status`, `date_paid`) VALUES
+('FN001', 'LIB001', 'BOR020', 48.00, 24, 2.00, '2026-05-09 00:00:00', 'Unpaid', NULL),
+('FN002', 'LIB001', 'BOR013', 96.00, 48, 2.00, '2026-05-07 00:00:00', 'Unpaid', NULL);
 
 -- --------------------------------------------------------
 
@@ -497,7 +505,7 @@ CREATE TABLE `library_staff` (
   `user_id` int(11) NOT NULL,
   `hire_date` date DEFAULT NULL,
   `duty_schedule` varchar(100) DEFAULT NULL,
-  `password` varchar(255) DEFAULT NULL,
+  `password` varchar(255) NOT NULL,
   `username` varchar(50) DEFAULT NULL,
   `assigned_counter` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -1252,8 +1260,7 @@ ALTER TABLE `borrower`
 -- Indexes for table `borrowing_policy`
 --
 ALTER TABLE `borrowing_policy`
-  ADD PRIMARY KEY (`policy_id`),
-  ADD UNIQUE KEY `max_books_allowed` (`max_books_allowed`);
+  ADD PRIMARY KEY (`policy_id`);
 
 --
 -- Indexes for table `borrows`
@@ -1262,7 +1269,8 @@ ALTER TABLE `borrows`
   ADD PRIMARY KEY (`borrow_id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `fk_borrows_copy` (`copy_id`),
-  ADD KEY `fk_borrows_policy` (`policy_id`);
+  ADD KEY `fk_borrows_policy` (`policy_id`),
+  ADD KEY `fk_borrows_libstaff` (`libstaff_id`);
 
 --
 -- Indexes for table `fines`
@@ -1270,8 +1278,7 @@ ALTER TABLE `borrows`
 ALTER TABLE `fines`
   ADD PRIMARY KEY (`fine_id`),
   ADD KEY `libclerk_id` (`libstaff_id`),
-  ADD KEY `borrow_id` (`borrow_id`),
-  ADD KEY `pub_id` (`pub_id`);
+  ADD KEY `borrow_id` (`borrow_id`);
 
 --
 -- Indexes for table `library_staff`
@@ -1354,6 +1361,7 @@ ALTER TABLE `borrower`
 --
 ALTER TABLE `borrows`
   ADD CONSTRAINT `fk_borrows_copy` FOREIGN KEY (`copy_id`) REFERENCES `pub copies` (`copy_id`),
+  ADD CONSTRAINT `fk_borrows_libstaff` FOREIGN KEY (`libstaff_id`) REFERENCES `library_staff` (`libstaff_id`),
   ADD CONSTRAINT `fk_borrows_policy` FOREIGN KEY (`policy_id`) REFERENCES `borrowing_policy` (`policy_id`),
   ADD CONSTRAINT `fk_borrows_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
 
@@ -1362,8 +1370,7 @@ ALTER TABLE `borrows`
 --
 ALTER TABLE `fines`
   ADD CONSTRAINT `fk_fines_borrow` FOREIGN KEY (`borrow_id`) REFERENCES `borrows` (`borrow_id`),
-  ADD CONSTRAINT `fk_fines_libstaff` FOREIGN KEY (`libstaff_id`) REFERENCES `library_staff` (`libstaff_id`),
-  ADD CONSTRAINT `fk_fines_publication_cascade` FOREIGN KEY (`pub_id`) REFERENCES `publication` (`pub_id`) ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_fines_libstaff` FOREIGN KEY (`libstaff_id`) REFERENCES `library_staff` (`libstaff_id`);
 
 --
 -- Constraints for table `library_staff`
@@ -1402,6 +1409,69 @@ ALTER TABLE `reports`
 --
 ALTER TABLE `status`
   ADD CONSTRAINT `fk_status_libstaff` FOREIGN KEY (`libstaff_id`) REFERENCES `library_staff` (`libstaff_id`);
+
+UPDATE `books` SET `ISBN` = CONCAT('ISBN-', `ISBN`) WHERE `ISBN` NOT LIKE 'ISBN-%';
+ALTER TABLE `books` ADD CONSTRAINT `chk_books_isbn`
+  CHECK (`ISBN` REGEXP '^ISBN-[A-Za-z0-9][A-Za-z0-9 ./-]*$');
+
+SET FOREIGN_KEY_CHECKS = 0;
+UPDATE `borrows` SET `borrow_id` = CONCAT('TRX', SUBSTRING(`borrow_id`, 4));
+UPDATE `fines` SET `borrow_id` = CONCAT('TRX', SUBSTRING(`borrow_id`, 4));
+SET FOREIGN_KEY_CHECKS = 1;
+
+UPDATE `borrows` SET
+  `copy_id` = CONCAT('COPY', LPAD(CAST(SUBSTRING(`borrow_id`, 4) AS UNSIGNED), 3, '0')),
+  `policy_id` = 'POL001',
+  `libstaff_id` = IF(CAST(SUBSTRING(`borrow_id`, 4) AS UNSIGNED) % 2 = 1, 'LIB001', 'LIB002');
+UPDATE `borrows` SET `copy_id` = 'COPY022' WHERE `borrow_id` = 'TRX020';
+UPDATE `borrows` SET `copy_id` = 'COPY094' WHERE `borrow_id` = 'TRX013';
+UPDATE `borrows` SET `date_returned` = `due_date`
+  WHERE `date_returned` IS NULL AND `borrow_id` NOT IN ('TRX043', 'TRX044', 'TRX045');
+ALTER TABLE `borrows`
+  MODIFY `copy_id` varchar(20) NOT NULL,
+  MODIFY `policy_id` varchar(20) NOT NULL,
+  MODIFY `libstaff_id` varchar(20) NOT NULL;
+
+UPDATE `borrower` SET `borrower_type` = 'Community Resident';
+ALTER TABLE `borrower` ADD CONSTRAINT `chk_borrower_type`
+  CHECK (`borrower_type` in ('Student','Teacher','Researcher','Community Resident','Other'));
+
+UPDATE `status` SET `status_type` = 'Available';
+INSERT INTO `status` (`status_id`, `status_type`, `libstaff_id`, `condition`) VALUES
+('110101', 'Available', 'LIB001', 'Good'),
+('110102', 'Available', 'LIB002', 'Good'),
+('110103', 'Available', 'LIB001', 'Good'),
+('110104', 'Available', 'LIB002', 'Good'),
+('110105', 'Available', 'LIB001', 'Good'),
+('110106', 'Available', 'LIB002', 'Good'),
+('110107', 'Available', 'LIB001', 'Good'),
+('110108', 'Available', 'LIB002', 'Good'),
+('110109', 'Available', 'LIB001', 'Good'),
+('110110', 'Available', 'LIB002', 'Good'),
+('110111', 'Available', 'LIB001', 'Good'),
+('110112', 'Available', 'LIB002', 'Good'),
+('110113', 'Available', 'LIB001', 'Good'),
+('110114', 'Available', 'LIB002', 'Good'),
+('110115', 'Available', 'LIB001', 'Good'),
+('110116', 'Available', 'LIB002', 'Good'),
+('110117', 'Available', 'LIB001', 'Good'),
+('110118', 'Available', 'LIB002', 'Good'),
+('110119', 'Available', 'LIB001', 'Good'),
+('110120', 'Available', 'LIB002', 'Good'),
+('110121', 'Available', 'LIB001', 'Good'),
+('110122', 'Available', 'LIB002', 'Good'),
+('110123', 'Available', 'LIB001', 'Good'),
+('110124', 'Available', 'LIB002', 'Good'),
+('110125', 'Available', 'LIB001', 'Good'),
+('110126', 'Available', 'LIB002', 'Good'),
+('110127', 'Available', 'LIB001', 'Good'),
+('110128', 'Available', 'LIB002', 'Good'),
+('110129', 'Available', 'LIB001', 'Good'),
+('110130', 'Available', 'LIB002', 'Good');
+UPDATE `pub copies` SET `status_id` = CAST(110000 + CAST(SUBSTRING(`copy_id`, 5) AS UNSIGNED) AS CHAR);
+UPDATE `status` SET `status_type` = 'Borrowed' WHERE `status_id` IN ('110043', '110044', '110045');
+ALTER TABLE `status` ADD CONSTRAINT `chk_status_type`
+  CHECK (`status_type` in ('Available','Borrowed','Under Maintenance'));
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
