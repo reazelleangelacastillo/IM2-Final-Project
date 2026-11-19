@@ -8,7 +8,7 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    $stmt = $pdo->query("SELECT report_id, libclerk_id, report_type, date_generated FROM reports");
+    $stmt = $pdo->query("SELECT report_id, libstaff_id, report_type, date_generated FROM reports");
     $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
@@ -55,7 +55,7 @@ try {
                             <?php foreach ($reports as $report): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($report['report_id']); ?></td>
-                                    <td><?php echo htmlspecialchars($report['libclerk_id']); ?></td>
+                                    <td><?php echo htmlspecialchars($report['libstaff_id']); ?></td>
                                     <td><?php echo htmlspecialchars($report['report_type']); ?></td>
                                     <td><?php echo htmlspecialchars($report['date_generated']); ?></td>
                                 </tr>
