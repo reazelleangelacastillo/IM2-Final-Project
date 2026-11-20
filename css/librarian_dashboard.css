@@ -909,6 +909,11 @@ td {
     font-size: 1.05rem;
 }
 
+.table-wrapper th,
+.table-wrapper td {
+    text-align: center;
+}
+
 .details-modal {
     width: min(100%, 860px);
 }
