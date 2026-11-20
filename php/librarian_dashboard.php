@@ -599,6 +599,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 /* SEARCH & FETCH LOGIC FOR THE TABLE */
 $search_query = $_GET['search'] ?? '';
+$view = ($_GET['view'] ?? '') === 'periodicals' ? 'periodicals' : 'books';
 $sort_options = [
     'recently_added' => 'Recently Added',
     'recently_updated' => 'Recently Updated',
@@ -791,9 +792,10 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Librarian Dashboard | BookTrace</title>
-    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261120-1">
+    <title><?php echo $view === 'periodicals' ? 'Periodicals' : 'Books'; ?> | BookTrace</title>
+    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261120-2">
     <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/dialog.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -1151,6 +1153,24 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
 </section>
     </div>
 
+    <div class="modal-overlay" id="details-modal" aria-hidden="true">
+        <section class="update-modal details-modal" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
+            <div class="modal-header">
+                <div>
+                    <h2 id="details-modal-title">Book Details</h2>
+                    <p id="details-modal-subtitle"></p>
+                </div>
+                <button type="button" class="modal-close" id="close-details-modal" aria-label="Close">&times;</button>
+            </div>
+            <div id="details-body"></div>
+            <div class="modal-actions">
+                <button type="button" class="modal-cancel" id="details-close-btn">Close</button>
+                <button type="button" class="submit-btn details-delete" id="details-delete-btn"><i class="bi bi-trash3-fill"></i> Delete</button>
+                <button type="button" class="submit-btn" id="details-update-btn"><i class="bi bi-pencil-square"></i> Update</button>
+            </div>
+        </section>
+    </div>
+
     <form method="POST" id="delete-publication-form" hidden>
         <input type="hidden" name="pub_id" id="delete-publication-id">
         <input type="hidden" name="delete_publication" value="1">
@@ -1160,7 +1180,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
         <input type="hidden" name="delete_periodical" value="1">
     </form>
 
-    <section class="table-section" id="books-table">
+    <section class="table-section" id="books-table"<?php echo $view === 'books' ? '' : ' hidden'; ?>>
         
         <div class="section-header-inline">
             
@@ -1173,6 +1193,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                 <form method="GET" action="" class="search-form-container sort-preserve-scroll">
                     <input type="hidden" name="periodical_search" value="<?php echo htmlspecialchars($periodical_search_query); ?>">
                     <input type="hidden" name="periodical_sort" value="<?php echo htmlspecialchars($periodical_sort); ?>">
+                    <input type="hidden" name="view" value="books">
                     <input type="hidden" name="scroll_position" value="0">
                     <input type="text" name="search" placeholder="Search Title, ID, Subtitle, or Language..." value="<?php echo htmlspecialchars($search_query); ?>" class="search-input-box">
                     <select name="book_sort" class="sort-select" aria-label="Sort books" onchange="this.form.elements.scroll_position.value = Math.round(window.scrollY); this.form.submit()">
@@ -1185,6 +1206,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                     </button>
                     <?php if (!empty($search_query)): ?>
                         <a href="librarian_dashboard.php?<?php echo htmlspecialchars(http_build_query([
+                            'view' => 'books',
                             'book_sort' => $book_sort,
                             'periodical_search' => $periodical_search_query,
                             'periodical_sort' => $periodical_sort
@@ -1226,23 +1248,11 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                     <tr>
                         <th>Publication ID</th>
                         <th>Title</th>
-                        <th>Subtitle</th>
+                        <th>Category</th>
                         <th>Language</th>
                         <th>Shelf</th>
-                        <th>Pages</th>
-                        <th>Series</th>
-                        <th>Edition</th>
-                        <th>Publisher ID</th>
-                        <th>Publisher</th>
-                        <th>Place of Publication</th>
-                        <th>Date Published</th>
-                        <th>Copyright</th>
                         <th>Status</th>
-                        <th>Class No.</th>
-                        <th>Call No.</th>
                         <th>ISBN</th>
-                        <th>Category</th>
-                        <th>Audience Type</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1273,28 +1283,16 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                         
                         <td><strong><?php echo htmlspecialchars($row['pub_id']); ?></strong></td>
                         <td><?php echo htmlspecialchars($row['title']); ?></td>
-                        <td><?php echo htmlspecialchars($row['subtitle'] ?? ''); ?></td>
+                        <td><?php echo htmlspecialchars($row['category'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($row['language_used']); ?></td>
                         <td><?php echo htmlspecialchars($row['shelf_location']); ?></td>
-                        <td><?php echo htmlspecialchars($row['pages']); ?></td>
-                        <td><?php echo htmlspecialchars($row['series'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($row['edition'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($row['publisher_id'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($row['publisher'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($row['place_of_publication'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($row['date_published']); ?></td>
-                        <td><?php echo htmlspecialchars($row['copyright_date']); ?></td>
                         <td><?php echo htmlspecialchars($row['book_status']); ?></td>
-                        <td><?php echo htmlspecialchars($row['class_no'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($row['call_no'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($row['ISBN'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($row['category'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($row['audience_type'] ?? ''); ?></td>
                     </tr>
                     <?php
                         }
                     } else {
-                        echo "<tr><td colspan='19' style='text-align:center;'>No publications found.</td></tr>";
+                        echo "<tr><td colspan='7' style='text-align:center;'>No publications found.</td></tr>";
                     }
                     ?>
                 </tbody>
@@ -1302,13 +1300,14 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
         </div>
     </section>
 
-    <section class="table-section" id="periodicals-table">
+    <section class="table-section" id="periodicals-table"<?php echo $view === 'periodicals' ? '' : ' hidden'; ?>>
         <div class="section-header-inline">
             <h2 class="section-title"><i class="bi bi-newspaper"></i> Periodicals</h2>
             <div class="header-actions-group">
                 <form method="GET" action="" class="search-form-container sort-preserve-scroll">
                     <input type="hidden" name="search" value="<?php echo htmlspecialchars($search_query); ?>">
                     <input type="hidden" name="book_sort" value="<?php echo htmlspecialchars($book_sort); ?>">
+                    <input type="hidden" name="view" value="periodicals">
                     <input type="hidden" name="scroll_position" value="0">
                     <input type="text" name="periodical_search" placeholder="Search ISSN, Publication ID, Title, or Type..." value="<?php echo htmlspecialchars($periodical_search_query); ?>" class="search-input-box">
                     <select name="periodical_sort" class="sort-select" aria-label="Sort periodicals" onchange="this.form.elements.scroll_position.value = Math.round(window.scrollY); this.form.submit()">
@@ -1321,6 +1320,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                     </button>
                     <?php if ($periodical_search_query !== ''): ?>
                         <a href="librarian_dashboard.php?<?php echo htmlspecialchars(http_build_query([
+                            'view' => 'periodicals',
                             'search' => $search_query,
                             'book_sort' => $book_sort,
                             'periodical_sort' => $periodical_sort
@@ -1353,20 +1353,11 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                     <tr>
                         <th>Publication ID</th>
                         <th>Title</th>
-                        <th>Subtitle</th>
+                        <th>Periodical Type</th>
+                        <th>ISSN</th>
                         <th>Language</th>
                         <th>Shelf</th>
-                        <th>Pages</th>
-                        <th>Series</th>
-                        <th>Edition</th>
-                        <th>Publisher ID</th>
-                        <th>Publisher</th>
-                        <th>Place of Publication</th>
-                        <th>Date Published</th>
-                        <th>Copyright</th>
                         <th>Status</th>
-                        <th>ISSN</th>
-                        <th>Periodical Type</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1375,27 +1366,31 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                             <tr class="clickable-periodical-row"
                                 data-issn="<?php echo htmlspecialchars($periodical['ISSN']); ?>"
                                 data-pubid="<?php echo htmlspecialchars($periodical['pub_id']); ?>"
-                                data-type="<?php echo htmlspecialchars($periodical['peridodic_type']); ?>">
+                                data-type="<?php echo htmlspecialchars($periodical['peridodic_type']); ?>"
+                                data-title="<?php echo htmlspecialchars($periodical['title']); ?>"
+                                data-subtitle="<?php echo htmlspecialchars($periodical['subtitle'] ?? ''); ?>"
+                                data-language="<?php echo htmlspecialchars($periodical['language_used']); ?>"
+                                data-shelf="<?php echo htmlspecialchars($periodical['shelf_location']); ?>"
+                                data-pages="<?php echo htmlspecialchars($periodical['pages']); ?>"
+                                data-series="<?php echo htmlspecialchars($periodical['series'] ?? ''); ?>"
+                                data-edition="<?php echo htmlspecialchars($periodical['edition'] ?? ''); ?>"
+                                data-publisher="<?php echo htmlspecialchars($periodical['publisher_id'] ?? ''); ?>"
+                                data-publisher-name="<?php echo htmlspecialchars($periodical['publisher'] ?? ''); ?>"
+                                data-place-of-publication="<?php echo htmlspecialchars($periodical['place_of_publication'] ?? ''); ?>"
+                                data-datepub="<?php echo htmlspecialchars($periodical['date_published']); ?>"
+                                data-copyright="<?php echo htmlspecialchars($periodical['copyright_date']); ?>"
+                                data-status="<?php echo htmlspecialchars($periodical['book_status']); ?>">
                                 <td><strong><?php echo htmlspecialchars($periodical['pub_id']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($periodical['title']); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['subtitle'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars($periodical['peridodic_type']); ?></td>
+                                <td><?php echo htmlspecialchars($periodical['ISSN']); ?></td>
                                 <td><?php echo htmlspecialchars($periodical['language_used']); ?></td>
                                 <td><?php echo htmlspecialchars($periodical['shelf_location']); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['pages']); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['series'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['edition'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['publisher_id'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['publisher'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['place_of_publication'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['date_published']); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['copyright_date']); ?></td>
                                 <td><?php echo htmlspecialchars($periodical['book_status']); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['ISSN']); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['peridodic_type']); ?></td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
-                        <tr><td colspan="16" style="text-align:center;"><?php echo $periodical_search_query !== '' ? 'No periodicals match your search.' : 'No periodical records found.'; ?></td></tr>
+                        <tr><td colspan="7" style="text-align:center;"><?php echo $periodical_search_query !== '' ? 'No periodicals match your search.' : 'No periodical records found.'; ?></td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -1403,6 +1398,8 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
     </section>
 
 </main>
+
+<?php require __DIR__ . '/includes/confirm_dialog.php'; ?>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
@@ -1605,14 +1602,19 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("update-periodical-issn").focus();
     });
 
-    deletePeriodicalButton.addEventListener("click", function() {
+    deletePeriodicalButton.addEventListener("click", async function() {
         if (!selectedPeriodicalRow) {
             openModal(periodicalSelectionWarning);
             closePeriodicalSelectionWarning.focus();
             return;
         }
 
-        if (window.confirm("Are you sure you want to delete the selected periodical?")) {
+        const confirmedPeriodical = await bpConfirm({
+            title: "Delete Periodical",
+            message: "Are you sure you want to delete the selected periodical?",
+            buttons: [{ label: "Delete", value: true, kind: "danger" }]
+        });
+        if (confirmedPeriodical) {
             deletePeriodicalIssn.value = selectedPeriodicalRow.dataset.issn;
             deletePeriodicalForm.submit();
         }
@@ -1673,14 +1675,19 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("modal_title").focus();
     });
 
-    deleteButton.addEventListener("click", function() {
+    deleteButton.addEventListener("click", async function() {
         if (!selectedRow) {
             openModal(selectionWarningModal);
             closeSelectionWarning.focus();
             return;
         }
 
-        if (window.confirm("Are you sure you want to delete the selected publication?")) {
+        const confirmedBook = await bpConfirm({
+            title: "Delete Book",
+            message: "Are you sure you want to delete the selected publication?",
+            buttons: [{ label: "Delete", value: true, kind: "danger" }]
+        });
+        if (confirmedBook) {
             deletePublicationId.value = selectedRow.dataset.pubid;
             deleteForm.submit();
         }
@@ -1725,21 +1732,100 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    rows.forEach(row => {
+    const detailsModal = document.getElementById("details-modal");
+    const detailsTitle = document.getElementById("details-modal-title");
+    const detailsSubtitle = document.getElementById("details-modal-subtitle");
+    const detailsBody = document.getElementById("details-body");
+    let detailsKind = "book";
+
+    const detailsGroups = {
+        book: [
+            ["Basic Info", [["Publication ID", "pubid"], ["Title", "title"], ["Subtitle", "subtitle"], ["Language", "language"], ["Pages", "pages"], ["Shelf", "shelf"]]],
+            ["Publishing", [["Publisher ID", "publisher"], ["Publisher", "publisherName"], ["Place of Publication", "placeOfPublication"], ["Date Published", "datepub"], ["Copyright Year", "copyright"], ["Series", "series"], ["Edition", "edition"]]],
+            ["Classification", [["Category", "category"], ["Audience Type", "audienceType"], ["Class No.", "classNo"], ["Call No.", "callNo"], ["ISBN", "isbn"], ["Status", "status"]]]
+        ],
+        periodical: [
+            ["Basic Info", [["Publication ID", "pubid"], ["Title", "title"], ["Subtitle", "subtitle"], ["Language", "language"], ["Pages", "pages"], ["Shelf", "shelf"]]],
+            ["Publishing", [["Publisher ID", "publisher"], ["Publisher", "publisherName"], ["Place of Publication", "placeOfPublication"], ["Date Published", "datepub"], ["Copyright Year", "copyright"], ["Series", "series"], ["Edition", "edition"]]],
+            ["Classification", [["ISSN", "issn"], ["Periodical Type", "type"], ["Status", "status"]]]
+        ]
+    };
+
+    function escapeHtml(value) {
+        const holder = document.createElement("div");
+        holder.textContent = value;
+        return holder.innerHTML;
+    }
+
+    function openDetails(kind, row) {
+        detailsKind = kind;
+        detailsTitle.textContent = kind === "book" ? "Book Details" : "Periodical Details";
+        detailsSubtitle.textContent = row.dataset.title || "";
+        detailsBody.innerHTML = detailsGroups[kind].map(function(group) {
+            return '<div class="details-group"><h3>' + group[0] + '</h3><dl>' +
+                group[1].map(function(field) {
+                    const value = row.dataset[field[1]];
+                    return '<dt>' + field[0] + '</dt><dd>' + (value ? escapeHtml(value) : '<span class="details-empty">Not provided</span>') + '</dd>';
+                }).join("") + '</dl></div>';
+        }).join("");
+        openModal(detailsModal);
+    }
+
+    function closeDetails() {
+        closeModal(detailsModal);
+    }
+
+    rows.forEach(function(row) {
+        row.setAttribute("tabindex", "0");
         row.addEventListener("click", function() {
-            rows.forEach(r => r.classList.remove("selected-row"));
+            rows.forEach(function(r) { r.classList.remove("selected-row"); });
             this.classList.add("selected-row");
             selectedRow = this;
             closeSelectionWarningModal();
+            openDetails("book", this);
         });
-        periodicalRows.forEach(row => {
-            row.addEventListener("click", function() {
-                periodicalRows.forEach(periodicalRow => periodicalRow.classList.remove("selected-row"));
-                this.classList.add("selected-row");
-                selectedPeriodicalRow = this;
-                closeModal(periodicalSelectionWarning);
-            });
+        row.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                this.click();
+            }
         });
+    });
+
+    periodicalRows.forEach(function(row) {
+        row.setAttribute("tabindex", "0");
+        row.addEventListener("click", function() {
+            periodicalRows.forEach(function(r) { r.classList.remove("selected-row"); });
+            this.classList.add("selected-row");
+            selectedPeriodicalRow = this;
+            closeModal(periodicalSelectionWarning);
+            openDetails("periodical", this);
+        });
+        row.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                this.click();
+            }
+        });
+    });
+
+    document.getElementById("close-details-modal").addEventListener("click", closeDetails);
+    document.getElementById("details-close-btn").addEventListener("click", closeDetails);
+    document.getElementById("details-update-btn").addEventListener("click", function() {
+        closeDetails();
+        (detailsKind === "book" ? updateButton : updatePeriodicalButton).click();
+    });
+    document.getElementById("details-delete-btn").addEventListener("click", function() {
+        closeDetails();
+        (detailsKind === "book" ? deleteButton : deletePeriodicalButton).click();
+    });
+    detailsModal.addEventListener("click", function(event) {
+        if (event.target === detailsModal) {
+            closeDetails();
+        }
+    });
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape" && detailsModal.classList.contains("is-open")) {
+            closeDetails();
+        }
     });
 });
 </script>

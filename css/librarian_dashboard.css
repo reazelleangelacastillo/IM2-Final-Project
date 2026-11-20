@@ -908,3 +908,57 @@ td {
 .back-btn .bi {
     font-size: 1.05rem;
 }
+
+.details-modal {
+    width: min(100%, 860px);
+}
+
+.details-group {
+    margin-bottom: 20px;
+}
+
+.details-group h3 {
+    margin: 0 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5ebf2;
+    color: #003580;
+    font-size: 14px;
+}
+
+.details-group dl {
+    display: grid;
+    grid-template-columns: 170px 1fr 170px 1fr;
+    gap: 8px 16px;
+    margin: 0;
+    font-size: 13px;
+}
+
+.details-group dt {
+    color: #746b79;
+}
+
+.details-group dd {
+    margin: 0;
+    color: #25364a;
+    overflow-wrap: anywhere;
+}
+
+.details-empty {
+    color: #9aa3ae;
+}
+
+.submit-btn.details-delete {
+    background-color: #e53935;
+}
+
+.clickable-row:focus-visible,
+.clickable-periodical-row:focus-visible {
+    outline: 2px solid #003580;
+    outline-offset: -2px;
+}
+
+@media (max-width: 768px) {
+    .details-group dl {
+        grid-template-columns: 130px 1fr;
+    }
+}
