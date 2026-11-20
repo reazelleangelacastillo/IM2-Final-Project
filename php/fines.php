@@ -41,7 +41,7 @@ require_once __DIR__ . '/includes/auth.php';
     </section>
 
     <section class="card">
-        <h2 class="page-title"><i class="bi bi-hourglass-split"></i> Overdue now</h2>
+        <h2 class="page-title"><i class="bi bi-hourglass-split"></i> Overdue Now</h2>
         <p class="page-note">Books overdue and not yet returned. These are not fines yet. A fine is recorded when the book is returned.</p>
         <div class="table-wrap" id="overdue-list"></div>
     </section>
@@ -111,11 +111,11 @@ require_once __DIR__ . '/includes/auth.php';
         }
         const s = data.summary;
         summaryGrid.innerHTML =
-            '<div class="summary-card"><div class="summary-label">Unpaid fines</div><div class="summary-value">' + peso(s.unpaid_total) +
+            '<div class="summary-card"><div class="summary-label">Unpaid Fines</div><div class="summary-value">' + peso(s.unpaid_total) +
             '</div><div class="summary-sub">' + s.unpaid_count + ' fine(s)</div></div>' +
-            '<div class="summary-card"><div class="summary-label">Paid fines</div><div class="summary-value">' + peso(s.paid_total) +
+            '<div class="summary-card"><div class="summary-label">Paid Fines</div><div class="summary-value">' + peso(s.paid_total) +
             '</div><div class="summary-sub">' + s.paid_count + ' fine(s)</div></div>' +
-            '<div class="summary-card"><div class="summary-label">Borrowers with unpaid fines</div><div class="summary-value">' + s.borrowers_with_unpaid +
+            '<div class="summary-card"><div class="summary-label">Borrowers with Unpaid Fines</div><div class="summary-value">' + s.borrowers_with_unpaid +
             '</div><div class="summary-sub">Blocked from borrowing</div></div>';
     }
 
@@ -131,7 +131,7 @@ require_once __DIR__ . '/includes/auth.php';
             return;
         }
         fineList.innerHTML = '<table class="mini-table"><thead><tr><th>Fine</th><th>Transaction</th><th>Borrower</th><th>Title</th>' +
-            '<th>Hours late</th><th>Rate</th><th>Amount</th><th>Assessed</th><th>Status</th><th>Paid on</th><th></th></tr></thead><tbody>' +
+            '<th>Hours Late</th><th>Rate</th><th>Amount</th><th>Assessed</th><th>Status</th><th>Paid On</th><th></th></tr></thead><tbody>' +
             data.fines.map(f =>
                 '<tr><td>' + esc(f.fine_id) + '</td><td>' + esc(f.borrow_id) + '</td>' +
                 '<td>' + esc(f.borrower_name) + '<br><span class="muted">' + esc(f.borrower_id) + '</span></td>' +
@@ -157,7 +157,7 @@ require_once __DIR__ . '/includes/auth.php';
             return;
         }
         overdueList.innerHTML = '<table class="mini-table"><thead><tr><th>Transaction</th><th>Borrower</th><th>Title</th><th>Copy</th>' +
-            '<th>Due</th><th>Hours late</th><th>Fine so far</th></tr></thead><tbody>' +
+            '<th>Due</th><th>Hours Late</th><th>Fine So Far</th></tr></thead><tbody>' +
             data.overdue.map(o =>
                 '<tr><td>' + esc(o.transaction_id) + '</td>' +
                 '<td>' + esc(o.borrower_name) + '<br><span class="muted">' + esc(o.borrower_id) + '</span></td>' +
@@ -193,7 +193,7 @@ require_once __DIR__ . '/includes/auth.php';
             return;
         }
         const choice = await bpConfirm({
-            title: 'Mark fine as paid',
+            title: 'Mark Fine as Paid',
             message: 'Fine ' + btn.dataset.id + '\n' + btn.dataset.name + '\nAmount: ' + peso(btn.dataset.amount),
             buttons: [{ label: 'Mark as Paid', value: true, kind: 'primary' }]
         });

@@ -15,7 +15,7 @@ html, body {
 
 .left-panel {
     flex: 1;
-    background-image: linear-gradient(#4169aeb3, #001f5bb3), url("/QueryShelf/assets/books.jpg"); 
+    background-image: linear-gradient(#4169aeb3, #001f5bb3), url("../assets/books.jpg"); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

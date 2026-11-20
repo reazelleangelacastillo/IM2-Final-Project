@@ -155,8 +155,9 @@ body {
     align-self: flex-start;
 }
 
-#register-new-btn {
+.bp-form h3 {
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .page-container .card + .card {
