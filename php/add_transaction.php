@@ -47,6 +47,8 @@ require_once __DIR__ . '/includes/auth.php';
     </section>
 </main>
 
+<?php require __DIR__ . '/includes/confirm_dialog.php'; ?>
+
 <script>
 (function () {
     const api = 'transactions_api.php';
@@ -63,7 +65,8 @@ require_once __DIR__ . '/includes/auth.php';
     const duePreview = document.getElementById('due-preview');
     const borrowSubmit = document.getElementById('borrow-submit');
     let borrower = null;
-    let chosenCopy = null;
+    let chosen = [];
+    let slots = 0;
     let copyTimer = null;
 
     function esc(value) {
@@ -151,35 +154,63 @@ require_once __DIR__ . '/includes/auth.php';
         }
         const hours = Number(btn.dataset.hours);
         const fine = Number(btn.dataset.fine);
-        const text = hours > 0
-            ? 'Return ' + btn.dataset.id + ' now? It is ' + hours + ' hour(s) late. A fine of about ' + peso(fine) + ' will be recorded.'
-            : 'Return ' + btn.dataset.id + ' now?';
-        if (!window.confirm(text)) {
+        const late = hours > 0 && fine > 0;
+        const choice = await bpConfirm({
+            title: 'Return book',
+            message: late
+                ? 'Return ' + btn.dataset.id + ' now?\nIt is ' + hours + ' hour(s) late. Fine: about ' + peso(fine) + '.\nCollect the payment now, or leave the fine unpaid for later.'
+                : 'Return ' + btn.dataset.id + ' now?',
+            buttons: late
+                ? [
+                    { label: 'Return, pay later', value: 'later', kind: 'secondary' },
+                    { label: 'Return and collect payment', value: 'pay', kind: 'primary' }
+                ]
+                : [{ label: 'Return', value: 'later', kind: 'primary' }]
+        });
+        if (!choice) {
             return;
         }
         btn.disabled = true;
-        const res = await postJson({ action: 'return', borrow_id: btn.dataset.id });
+        const res = await postJson({ action: 'return', borrow_id: btn.dataset.id, pay: choice === 'pay' ? '1' : '0' });
         if (!res.ok) {
             show(returnResult, res.error, 'error');
             btn.disabled = false;
             return;
         }
-        if (res.fine_id) {
-            show(returnResult, 'Returned ' + res.transaction_id + '. Fine ' + res.fine_id + ' of ' + peso(res.fine_amount) + ' recorded (' + res.hours_late + ' hour(s) late).', 'error');
+        if (res.fine_id && res.paid) {
+            show(returnResult, 'Returned ' + res.transaction_id + '. Fine ' + res.fine_id + ' of ' + peso(res.fine_amount) + ' collected and recorded as Paid (' + res.hours_late + ' hour(s) late).', 'success');
+        } else if (res.fine_id) {
+            show(returnResult, 'Returned ' + res.transaction_id + '. Fine ' + res.fine_id + ' of ' + peso(res.fine_amount) + ' recorded as Unpaid (' + res.hours_late + ' hour(s) late). The borrower cannot borrow until it is paid.', 'error');
         } else {
             show(returnResult, 'Returned ' + res.transaction_id + '. No fine.', 'success');
         }
         refresh();
     });
 
+    function renderChosen() {
+        if (chosen.length === 0) {
+            copySelected.hidden = true;
+            copySelected.innerHTML = '';
+        } else {
+            copySelected.innerHTML = '<div class="chip-list">' + chosen.map(c =>
+                '<span class="chip"><strong>' + esc(c.title) + '</strong> <span class="muted">' + esc(c.id) + '</span>' +
+                '<button type="button" class="chip-remove" data-id="' + esc(c.id) + '" aria-label="Remove">&times;</button></span>'
+            ).join('') + '</div><p class="page-note slot-note">' + chosen.length + ' of ' + slots + ' available slot(s) used.</p>';
+            copySelected.hidden = false;
+        }
+        const full = chosen.length >= slots;
+        copySearch.disabled = full;
+        copySearch.placeholder = full ? 'Limit reached' : 'Search available copies by title or copy ID';
+        borrowSubmit.disabled = chosen.length === 0;
+        borrowSubmit.textContent = chosen.length > 1 ? 'Borrow ' + chosen.length + ' books' : 'Borrow';
+    }
+
     function resetCopyStep() {
-        chosenCopy = null;
+        chosen = [];
         copySearch.value = '';
         copyResults.hidden = true;
         copyResults.innerHTML = '';
-        copySelected.hidden = true;
-        copySelected.innerHTML = '';
-        borrowSubmit.disabled = true;
+        renderChosen();
     }
 
     async function loadDuePreview() {
@@ -196,12 +227,14 @@ require_once __DIR__ . '/includes/auth.php';
             return;
         }
         if (data.copies.length === 0) {
-            copyResults.innerHTML = '<div class="no-match"><p>No available copy found.</p></div>';
+            copyResults.innerHTML = '<div class="no-match"><p>No copy found.</p></div>';
         } else {
             copyResults.innerHTML = data.copies.map(c =>
-                '<button type="button" class="result-row" data-id="' + esc(c.copy_id) + '" data-title="' + esc(c.title) + '">' +
+                '<button type="button" class="result-row" data-id="' + esc(c.copy_id) + '" data-title="' + esc(c.title) + '"' + (c.selectable ? '' : ' disabled') + '>' +
                 '<span class="result-name">' + esc(c.title) + '</span>' +
-                '<span class="result-meta">' + esc(c.copy_id) + ' &middot; ' + esc(c.shelf_location) + '</span></button>'
+                '<span class="result-meta">' + esc(c.copy_id) + ' &middot; ' + esc(c.shelf_location) +
+                (c.due_back ? ' &middot; Due back ' + formatDateTime(c.due_back) : '') + '</span>' +
+                '<span class="tag ' + (c.selectable ? 'tag-green' : 'tag-grey') + '">' + esc(c.label) + '</span></button>'
             ).join('');
         }
         copyResults.hidden = false;
@@ -214,29 +247,45 @@ require_once __DIR__ . '/includes/auth.php';
 
     copyResults.addEventListener('click', (e) => {
         const row = e.target.closest('.result-row');
-        if (!row) {
+        if (!row || row.disabled) {
             return;
         }
-        chosenCopy = row.dataset.id;
-        copySelected.innerHTML = '<strong>' + esc(row.dataset.title) + '</strong> <span class="muted">' + esc(chosenCopy) + '</span>';
-        copySelected.hidden = false;
+        if (chosen.length < slots && !chosen.some(c => c.id === row.dataset.id)) {
+            chosen.push({ id: row.dataset.id, title: row.dataset.title });
+        }
         copyResults.hidden = true;
         copySearch.value = '';
-        borrowSubmit.disabled = false;
+        renderChosen();
+        if (!copySearch.disabled) {
+            copySearch.focus();
+        }
+    });
+
+    copySelected.addEventListener('click', (e) => {
+        const btn = e.target.closest('.chip-remove');
+        if (!btn) {
+            return;
+        }
+        chosen = chosen.filter(c => c.id !== btn.dataset.id);
+        renderChosen();
     });
 
     borrowSubmit.addEventListener('click', async () => {
-        if (!borrower || !chosenCopy) {
+        if (!borrower || chosen.length === 0) {
             return;
         }
         borrowSubmit.disabled = true;
-        const res = await postJson({ action: 'borrow', borrower_id: borrower.borrower_id, copy_id: chosenCopy });
+        const titles = Object.fromEntries(chosen.map(c => [c.id, c.title]));
+        const res = await postJson({ action: 'borrow', borrower_id: borrower.borrower_id, copy_ids: chosen.map(c => c.id).join(',') });
         if (!res.ok) {
             show(borrowResult, res.error, 'error');
             borrowSubmit.disabled = false;
             return;
         }
-        show(borrowResult, 'Borrowed. Transaction ' + res.transaction_id + ', due ' + formatDateTime(res.due_date) + '.', 'success');
+        const lines = res.results.map(r => r.ok
+            ? 'Borrowed ' + titles[r.copy_id] + ' (' + r.copy_id + '): ' + r.transaction_id + ', due ' + formatDateTime(r.due_date) + '.'
+            : 'Not borrowed ' + titles[r.copy_id] + ' (' + r.copy_id + '): ' + r.error);
+        show(borrowResult, lines.join('\n'), res.results.every(r => r.ok) ? 'success' : 'error');
         resetCopyStep();
         refresh();
     });
@@ -248,6 +297,7 @@ require_once __DIR__ . '/includes/auth.php';
             show(returnResult, '', 'info');
         }
         borrower = d;
+        slots = Math.max(0, Number(d.max_books) - Number(d.active_borrows));
         borrowSection.hidden = false;
         resetCopyStep();
         if (d.verdict === 'Blocked') {
