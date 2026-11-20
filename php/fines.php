@@ -47,6 +47,8 @@ require_once __DIR__ . '/includes/auth.php';
     </section>
 </main>
 
+<?php require __DIR__ . '/includes/confirm_dialog.php'; ?>
+
 <script>
 (function () {
     const api = 'fines_api.php';
@@ -190,7 +192,12 @@ require_once __DIR__ . '/includes/auth.php';
         if (!btn) {
             return;
         }
-        if (!window.confirm('Mark fine ' + btn.dataset.id + ' (' + peso(btn.dataset.amount) + ', ' + btn.dataset.name + ') as paid?')) {
+        const choice = await bpConfirm({
+            title: 'Mark fine as paid',
+            message: 'Fine ' + btn.dataset.id + '\n' + btn.dataset.name + '\nAmount: ' + peso(btn.dataset.amount),
+            buttons: [{ label: 'Mark as Paid', value: true, kind: 'primary' }]
+        });
+        if (!choice) {
             return;
         }
         btn.disabled = true;

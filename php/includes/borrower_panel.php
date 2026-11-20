@@ -249,7 +249,14 @@
         document.getElementById('card-edit').addEventListener('click', () => openForm('edit', p));
         document.getElementById('card-delete').addEventListener('click', () => deleteBorrower(p.borrower_id));
         document.dispatchEvent(new CustomEvent('borrower:selected', {
-            detail: { borrower_id: p.borrower_id, name: fullName, verdict: data.verdict, reasons: data.reasons }
+            detail: {
+                borrower_id: p.borrower_id,
+                name: fullName,
+                verdict: data.verdict,
+                reasons: data.reasons,
+                active_borrows: s.active_borrows,
+                max_books: s.max_books
+            }
         }));
     }
 
@@ -268,7 +275,12 @@
     }
 
     async function deleteBorrower(id) {
-        if (!window.confirm('Delete borrower ' + id + '? This cannot be undone.')) {
+        const choice = await bpConfirm({
+            title: 'Delete borrower',
+            message: 'Delete borrower ' + id + '? This cannot be undone.',
+            buttons: [{ label: 'Delete', value: true, kind: 'danger' }]
+        });
+        if (!choice) {
             return;
         }
         const res = await safe(() => postJson({ action: 'delete', borrower_id: id }));
