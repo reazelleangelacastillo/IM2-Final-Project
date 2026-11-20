@@ -32,7 +32,7 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 try {
     if ($action === 'policy') {
-        $row = $pdo->query('SELECT max_books_allowed, loan_period_days, fine_rate_per_hour, DATE_ADD(NOW(), INTERVAL loan_period_days DAY) AS due_preview FROM borrowing_policy ORDER BY policy_id LIMIT 1')->fetch();
+        $row = $pdo->query('SELECT max_books_allowed, loan_duration_days AS loan_period_days, fine_rate_per_hour, DATE_ADD(NOW(), INTERVAL loan_duration_days DAY) AS due_preview FROM borrowing_policy ORDER BY policy_id LIMIT 1')->fetch();
         respond(['ok' => true, 'policy' => $row]);
     }
 

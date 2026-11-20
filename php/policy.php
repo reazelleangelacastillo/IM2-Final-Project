@@ -66,18 +66,18 @@ $saved = isset($_GET['saved']);
 
         <form method="POST" action="policy.php" class="stack-form">
             <div class="field-group">
-                <label for="max_books">Maximum books per borrower</label>
+                <label for="max_books">Maximum Books per Borrower</label>
                 <input type="text" inputmode="numeric" id="max_books" name="max_books" value="<?php echo htmlspecialchars($input['max_books']); ?>" required>
             </div>
             <div class="field-group">
-                <label for="loan_days">Loan period (days)</label>
+                <label for="loan_days">Loan Period (Days)</label>
                 <input type="text" inputmode="numeric" id="loan_days" name="loan_days" value="<?php echo htmlspecialchars($input['loan_days']); ?>" required>
             </div>
             <div class="field-group">
-                <label for="fine_rate">Late fine per full hour (PHP)</label>
+                <label for="fine_rate">Late Fine per Full Hour (PHP)</label>
                 <input type="text" inputmode="decimal" id="fine_rate" name="fine_rate" value="<?php echo htmlspecialchars($input['fine_rate']); ?>" required>
             </div>
-            <button type="submit" class="btn-primary"><i class="bi bi-check2"></i> Save policy</button>
+            <button type="submit" class="btn-primary"><i class="bi bi-check2"></i> Save Policy</button>
         </form>
     </section>
 </main>

@@ -1,10 +1,10 @@
 <div class="borrower-panel" id="borrower-panel">
     <div class="panel-head">
         <div>
-            <h2 class="page-title"><i class="bi bi-person-badge"></i> Find borrower</h2>
+            <h2 class="page-title"><i class="bi bi-person-badge"></i> Find Borrower</h2>
             <p class="page-note">Search by borrower ID or name, or register a new borrower.</p>
         </div>
-        <button type="button" class="btn-primary" id="register-new-btn"><i class="bi bi-person-plus"></i> Register new borrower</button>
+        <button type="button" class="btn-primary" id="register-new-btn"><i class="bi bi-person-plus"></i> Register New Borrower</button>
     </div>
     <div class="search-row">
         <i class="bi bi-search"></i>
@@ -17,25 +17,25 @@
 
 <dialog id="borrower-dialog" class="bp-dialog">
     <form id="borrower-form" class="bp-form" autocomplete="off">
-        <h3 id="borrower-form-title">Register borrower</h3>
+        <h3 id="borrower-form-title">Register Borrower</h3>
         <div id="borrower-form-alert" class="alert-danger" hidden></div>
         <div id="borrower-form-warning" class="alert-warning" hidden></div>
         <input type="hidden" name="borrower_id" id="bf-borrower-id">
         <div class="bp-grid">
             <div class="field-group">
-                <label for="bf-first-name">First name</label>
+                <label for="bf-first-name">First Name</label>
                 <input type="text" id="bf-first-name" name="first_name" maxlength="50" required>
             </div>
             <div class="field-group">
-                <label for="bf-middle-initial">Middle initial</label>
+                <label for="bf-middle-initial">Middle Initial</label>
                 <input type="text" id="bf-middle-initial" name="middle_initial" maxlength="1">
             </div>
             <div class="field-group">
-                <label for="bf-last-name">Last name</label>
+                <label for="bf-last-name">Last Name</label>
                 <input type="text" id="bf-last-name" name="last_name" maxlength="50" required>
             </div>
             <div class="field-group">
-                <label for="bf-birth-date">Birth date</label>
+                <label for="bf-birth-date">Birth Date</label>
                 <input type="date" id="bf-birth-date" name="birth_date" max="<?php echo date('Y-m-d'); ?>" required>
             </div>
             <div class="field-group">
@@ -58,7 +58,7 @@
                 </select>
             </div>
             <div class="field-group">
-                <label for="bf-id-type">ID type</label>
+                <label for="bf-id-type">ID Type</label>
                 <input type="text" id="bf-id-type" name="id_type" maxlength="100" list="bf-id-types" required>
                 <datalist id="bf-id-types">
                     <option value="National ID">
@@ -70,29 +70,29 @@
                 </datalist>
             </div>
             <div class="field-group">
-                <label for="bf-id-number">ID number</label>
+                <label for="bf-id-number">ID Number</label>
                 <input type="text" id="bf-id-number" name="id_number" maxlength="30" required>
             </div>
             <div class="field-group">
-                <label for="bf-barangay">Barangay (optional)</label>
+                <label for="bf-barangay">Barangay (Optional)</label>
                 <input type="text" id="bf-barangay" name="barangay" maxlength="100">
             </div>
             <div class="field-group">
-                <label for="bf-municipality">Municipality (optional)</label>
+                <label for="bf-municipality">Municipality (Optional)</label>
                 <input type="text" id="bf-municipality" name="municipality" maxlength="100">
             </div>
             <div class="field-group">
-                <label for="bf-province">Province (optional)</label>
+                <label for="bf-province">Province (Optional)</label>
                 <input type="text" id="bf-province" name="province" maxlength="100">
             </div>
             <div class="field-group">
-                <label for="bf-email">Email (optional)</label>
+                <label for="bf-email">Email (Optional)</label>
                 <input type="email" id="bf-email" name="email" maxlength="100">
             </div>
         </div>
         <div class="actions-row">
-            <button type="button" class="btn-secondary" id="bf-existing" hidden>View existing record</button>
-            <button type="button" class="btn-secondary" id="bf-override" hidden>Register anyway</button>
+            <button type="button" class="btn-secondary" id="bf-existing" hidden>View Existing Record</button>
+            <button type="button" class="btn-secondary" id="bf-override" hidden>Register Anyway</button>
             <button type="button" class="btn-secondary" id="bf-cancel">Cancel</button>
             <button type="submit" class="btn-primary" id="bf-save">Save</button>
         </div>
@@ -180,7 +180,7 @@
             '<button type="button" class="result-row" data-id="' + esc(r.borrower_id) + '">' +
             '<span class="result-name">' + esc(r.name) + '</span>' +
             '<span class="result-meta">' + esc(r.borrower_id) + ' &middot; ' + esc(r.category) + '</span>' +
-            (r.unpaid ? '<span class="tag tag-red">Unpaid fine</span>' : '') +
+            (r.unpaid ? '<span class="tag tag-red">Unpaid Fine</span>' : '') +
             (r.overdue ? '<span class="tag tag-red">Overdue</span>' : '') +
             '</button>'
         ).join('');
@@ -234,16 +234,16 @@
             '<div class="verdict verdict-' + esc(data.verdict.toLowerCase()) + '"><strong>' + esc(data.verdict) + '</strong>' + reasons + '</div>' +
             '<div class="info-grid">' +
             '<div class="info-section"><h4>Profile</h4><dl>' +
-            '<dt>Birth date</dt><dd>' + esc(p.birth_date) + '</dd>' +
+            '<dt>Birth Date</dt><dd>' + esc(p.birth_date) + '</dd>' +
             '<dt>Gender</dt><dd>' + esc(p.gender) + '</dd>' +
             '<dt>Address</dt><dd>' + esc(p.address || 'Not provided') + '</dd>' +
-            '<dt>ID type</dt><dd>' + esc(p.id_type) + '</dd>' +
-            '<dt>ID number</dt><dd>' + esc(p.id_number) + '</dd></dl></div>' +
+            '<dt>ID Type</dt><dd>' + esc(p.id_type) + '</dd>' +
+            '<dt>ID Number</dt><dd>' + esc(p.id_number) + '</dd></dl></div>' +
             '<div class="info-section"><h4>Status</h4><dl>' +
-            '<dt>Books held</dt><dd>' + s.active_borrows + ' of ' + s.max_books + '</dd>' +
-            '<dt>Unpaid fine</dt><dd>' + peso(s.unpaid_fine_total) + '</dd>' +
-            '<dt>Overdue titles</dt><dd>' + overdue + '</dd></dl></div></div>' +
-            '<h4>Current borrows</h4><table class="mini-table"><thead><tr><th>Title</th><th>Copy</th><th>Due</th><th></th></tr></thead><tbody>' + borrowRows + '</tbody></table>';
+            '<dt>Books Held</dt><dd>' + s.active_borrows + ' of ' + s.max_books + '</dd>' +
+            '<dt>Unpaid Fine</dt><dd>' + peso(s.unpaid_fine_total) + '</dd>' +
+            '<dt>Overdue Titles</dt><dd>' + overdue + '</dd></dl></div></div>' +
+            '<h4>Current Borrows</h4><table class="mini-table"><thead><tr><th>Title</th><th>Copy</th><th>Due</th><th></th></tr></thead><tbody>' + borrowRows + '</tbody></table>';
         cardBox.hidden = false;
 
         document.getElementById('card-edit').addEventListener('click', () => openForm('edit', p));
@@ -276,7 +276,7 @@
 
     async function deleteBorrower(id) {
         const choice = await bpConfirm({
-            title: 'Delete borrower',
+            title: 'Delete Borrower',
             message: 'Delete borrower ' + id + '? This cannot be undone.',
             buttons: [{ label: 'Delete', value: true, kind: 'danger' }]
         });
@@ -308,7 +308,7 @@
         formMode = mode;
         form.reset();
         resetFormAlerts();
-        formTitle.textContent = mode === 'edit' ? 'Edit borrower' : 'Register borrower';
+        formTitle.textContent = mode === 'edit' ? 'Edit Borrower' : 'Register Borrower';
         document.getElementById('bf-borrower-id').value = mode === 'edit' ? values.borrower_id : '';
         Array.from(form.elements).forEach(el => {
             if (el.name && values && values[el.name] !== undefined && values[el.name] !== null && el.name !== 'borrower_id') {

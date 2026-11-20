@@ -791,8 +791,8 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Librarian Dashboard | QueryShelf</title>
-    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261115-9">
+    <title>Librarian Dashboard | BookTrace</title>
+    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261120-1">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1044,7 +1044,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
     <div class="modal-overlay" id="periodical-selection-warning-modal" aria-hidden="true">
         <section class="selection-warning" role="alertdialog" aria-modal="true" aria-labelledby="periodical-selection-warning-title">
             <div class="warning-icon"><i class="bi bi-exclamation-lg"></i></div>
-            <h2 id="periodical-selection-warning-title">No periodical selected</h2>
+            <h2 id="periodical-selection-warning-title">No Periodical Selected</h2>
             <p>Select a periodical from the Periodicals table first.</p>
             <button type="button" class="submit-btn" id="close-periodical-selection-warning">OK</button>
         </section>
@@ -1145,7 +1145,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
     <div class="modal-overlay" id="selection-warning-modal" aria-hidden="true">
         <section class="selection-warning" role="alertdialog" aria-modal="true" aria-labelledby="selection-warning-title" aria-describedby="selection-warning-message">
             <div class="warning-icon"><i class="bi bi-exclamation-lg"></i></div>
-            <h2 id="selection-warning-title">No book selected</h2>
+            <h2 id="selection-warning-title">No Book Selected</h2>
 <p id="selection-warning-message">Please select a book from the Books table first.</p>
 <button type="button" class="submit-btn" id="close-selection-warning">OK</button>
 </section>
@@ -1193,7 +1193,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                 </form>
 
                 <button type="button" class="btn-header-action btn-header-update" id="open-add-publication-modal">
-                    <i class="bi bi-plus-lg"></i> Add Books
+                    <i class="bi bi-plus-lg"></i> Add Book
                 </button>
 
                 <button type="button" id="open-update-modal" class="btn-header-action btn-header-update">
@@ -1329,7 +1329,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                 </form>
 
                 <button type="button" class="btn-header-action btn-header-update" id="open-add-periodical-modal">
-                    <i class="bi bi-plus-lg"></i> Add Periodicals
+                    <i class="bi bi-plus-lg"></i> Add Periodical
                 </button>
                 <button type="button" class="btn-header-action btn-header-update" id="open-update-periodical-modal">
                     <i class="bi bi-pencil-square"></i> Update

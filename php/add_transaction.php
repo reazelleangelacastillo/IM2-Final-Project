@@ -22,14 +22,14 @@ require_once __DIR__ . '/includes/auth.php';
     </section>
 
     <section class="card" id="return-section">
-        <h2 class="page-title"><i class="bi bi-box-arrow-in-down"></i> Return books</h2>
+        <h2 class="page-title"><i class="bi bi-box-arrow-in-down"></i> Return Books</h2>
         <p class="page-note" id="return-scope">All active borrows.</p>
         <div id="return-result" class="panel-message" hidden></div>
         <div id="return-list"></div>
     </section>
 
     <section class="card" id="borrow-section" hidden>
-        <h2 class="page-title"><i class="bi bi-box-arrow-up"></i> Borrow a book</h2>
+        <h2 class="page-title"><i class="bi bi-box-arrow-up"></i> Borrow a Book</h2>
         <div id="borrow-blocked" class="alert-warning" hidden></div>
         <div id="borrow-result" class="panel-message" hidden></div>
         <div id="borrow-form" hidden>
@@ -127,7 +127,7 @@ require_once __DIR__ . '/includes/auth.php';
         const showWho = !borrower;
         returnList.innerHTML = '<table class="mini-table"><thead><tr><th>Transaction</th>' +
             (showWho ? '<th>Borrower</th>' : '') +
-            '<th>Title</th><th>Copy</th><th>Due</th><th>Hours late</th><th>Fine now</th><th></th></tr></thead><tbody>' +
+            '<th>Title</th><th>Copy</th><th>Due</th><th>Hours Late</th><th>Fine Now</th><th></th></tr></thead><tbody>' +
             data.borrows.map(b =>
                 '<tr><td>' + esc(b.borrow_id) + '</td>' +
                 (showWho ? '<td>' + esc(b.borrower_name) + '<br><span class="muted">' + esc(b.borrower_id) + '</span></td>' : '') +
@@ -156,14 +156,14 @@ require_once __DIR__ . '/includes/auth.php';
         const fine = Number(btn.dataset.fine);
         const late = hours > 0 && fine > 0;
         const choice = await bpConfirm({
-            title: 'Return book',
+            title: 'Return Book',
             message: late
                 ? 'Return ' + btn.dataset.id + ' now?\nIt is ' + hours + ' hour(s) late. Fine: about ' + peso(fine) + '.\nCollect the payment now, or leave the fine unpaid for later.'
                 : 'Return ' + btn.dataset.id + ' now?',
             buttons: late
                 ? [
-                    { label: 'Return, pay later', value: 'later', kind: 'secondary' },
-                    { label: 'Return and collect payment', value: 'pay', kind: 'primary' }
+                    { label: 'Return, Pay Later', value: 'later', kind: 'secondary' },
+                    { label: 'Return and Collect Payment', value: 'pay', kind: 'primary' }
                 ]
                 : [{ label: 'Return', value: 'later', kind: 'primary' }]
         });
@@ -202,7 +202,7 @@ require_once __DIR__ . '/includes/auth.php';
         copySearch.disabled = full;
         copySearch.placeholder = full ? 'Limit reached' : 'Search available copies by title or copy ID';
         borrowSubmit.disabled = chosen.length === 0;
-        borrowSubmit.textContent = chosen.length > 1 ? 'Borrow ' + chosen.length + ' books' : 'Borrow';
+        borrowSubmit.textContent = chosen.length > 1 ? 'Borrow ' + chosen.length + ' Books' : 'Borrow';
     }
 
     function resetCopyStep() {
