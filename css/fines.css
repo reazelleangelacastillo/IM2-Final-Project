@@ -1,0 +1,86 @@
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.summary-card {
+    padding: 16px 20px;
+    border: 1px solid #d9d9d9;
+    border-radius: 10px;
+}
+
+.summary-card .summary-label {
+    font-size: 13px;
+    color: #6b6b6b;
+}
+
+.summary-card .summary-value {
+    font-size: 26px;
+    font-weight: 600;
+    margin: 4px 0;
+}
+
+.summary-card .summary-sub {
+    font-size: 13px;
+    color: #6b6b6b;
+}
+
+.fines-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.filter-row {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #d9d9d9;
+    border-radius: 999px;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.filter-btn.active {
+    background: #1f1f1f;
+    border-color: #1f1f1f;
+    color: #ffffff;
+}
+
+.toolbar-search {
+    position: relative;
+    width: 320px;
+    max-width: 100%;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.tag-green {
+    background: #e3f4e6;
+    color: #1d6b2e;
+}
+
+.fine-note {
+    margin-top: 12px;
+}
+
+@media (max-width: 720px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .toolbar-search {
+        width: 100%;
+    }
+}
