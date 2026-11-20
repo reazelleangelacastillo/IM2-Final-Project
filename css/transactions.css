@@ -461,7 +461,7 @@ body {
 .mini-table th {
     background: #003580;
     color: white;
-    text-align: left;
+    text-align: center;
     padding: 10px 12px;
     font-weight: 500;
 }
@@ -470,6 +470,7 @@ body {
     padding: 10px 12px;
     border-bottom: 1px solid #e5ebf2;
     color: #4a4a4a;
+    text-align: center;
 }
 
 .empty-cell {
