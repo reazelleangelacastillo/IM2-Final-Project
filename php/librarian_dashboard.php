@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/lib/auth.php';
 $host = "localhost";
 $user = "root";
 $password = "";
@@ -803,7 +803,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
 </head>
 <body>
 
-<?php require __DIR__ . '/includes/header.php'; ?>
+<?php require __DIR__ . '/lib/header.php'; ?>
 
 <main class="dashboard-container">
 
@@ -1399,7 +1399,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
 
 </main>
 
-<?php require __DIR__ . '/includes/confirm_dialog.php'; ?>
+<?php require __DIR__ . '/lib/confirm_dialog.php'; ?>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
