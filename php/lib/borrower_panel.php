@@ -1,7 +1,7 @@
 <div class="borrower-panel" id="borrower-panel">
     <div class="panel-head">
         <div>
-            <h2 class="page-title"><i class="bi bi-person-badge"></i> Find Borrower</h2>
+            <h2 class="page-title">Find Borrower</h2>
             <p class="page-note">Search by borrower ID or name, or register a new borrower.</p>
         </div>
         <button type="button" class="btn-primary" id="register-new-btn"><i class="bi bi-person-plus"></i> Register New Borrower</button>

@@ -17,14 +17,14 @@ $pageTitle = 'Transactions';
     </section>
 
     <section class="card" id="return-section">
-        <h2 class="page-title"><i class="bi bi-box-arrow-in-down"></i> Return Books</h2>
+        <h2 class="page-title">Return Books</h2>
         <p class="page-note" id="return-scope">All active borrows.</p>
         <div id="return-result" class="panel-message" hidden></div>
         <div id="return-list"></div>
     </section>
 
     <section class="card" id="borrow-section" hidden>
-        <h2 class="page-title"><i class="bi bi-box-arrow-up"></i> Borrow a Book</h2>
+        <h2 class="page-title">Borrow a Book</h2>
         <div id="borrow-blocked" class="alert-warning" hidden></div>
         <div id="borrow-result" class="panel-message" hidden></div>
         <div id="borrow-form" hidden>

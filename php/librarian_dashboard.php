@@ -793,11 +793,14 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $view === 'periodicals' ? 'Periodicals' : 'Books'; ?> | BookTrace</title>
-    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261121-1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261121-2">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/dialog.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=block" rel="stylesheet">
     
         
 </head>
@@ -1185,7 +1188,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
         <div class="section-header-inline">
             
             <h2 class="section-title">
-                <i class="bi bi-book-half"></i> Books
+                Books
             </h2>
             
             <div class="header-actions-group">
@@ -1302,7 +1305,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
 
     <section class="table-section" id="periodicals-table"<?php echo $view === 'periodicals' ? '' : ' hidden'; ?>>
         <div class="section-header-inline">
-            <h2 class="section-title"><i class="bi bi-newspaper"></i> Periodicals</h2>
+            <h2 class="section-title">Periodicals</h2>
             <div class="header-actions-group">
                 <form method="GET" action="" class="search-form-container sort-preserve-scroll">
                     <input type="hidden" name="search" value="<?php echo htmlspecialchars($search_query); ?>">

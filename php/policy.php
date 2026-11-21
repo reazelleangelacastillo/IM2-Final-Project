@@ -49,7 +49,7 @@ $pageTitle = 'Borrowing Policy';
 
 <main class="page-container">
     <section class="card narrow">
-        <h2 class="page-title"><i class="bi bi-sliders"></i> Borrowing Policy</h2>
+        <h2 class="page-title">Borrowing Policy</h2>
         <p class="page-note">Changes apply to new borrows only. Existing borrows keep their due times, and existing fines keep their stored rate.</p>
 
         <?php if ($saved): ?>

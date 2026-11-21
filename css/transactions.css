@@ -25,8 +25,10 @@ body {
 
 .page-title {
     color: #003580;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     margin: 0 0 8px;
     display: flex;
     align-items: center;
@@ -173,6 +175,7 @@ body {
 
 #return-list {
     overflow-x: auto;
+    min-height: 150px;
 }
 
 .chip-list {

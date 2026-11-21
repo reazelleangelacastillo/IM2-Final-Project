@@ -1,5 +1,8 @@
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
+if ($currentPage === 'view_report.php') {
+    $currentPage = 'reports.php';
+}
 $currentView = ($_GET['view'] ?? '') === 'periodicals' ? 'periodicals' : 'books';
 $navItems = [
     'librarian_dashboard.php?view=books' => 'Books',

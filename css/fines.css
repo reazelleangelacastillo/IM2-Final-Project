@@ -2,6 +2,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
+    min-height: 110px;
 }
 
 .summary-card {
@@ -64,6 +65,7 @@
 
 .table-wrap {
     overflow-x: auto;
+    min-height: 150px;
 }
 
 .fine-note {
