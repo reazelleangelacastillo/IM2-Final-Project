@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/includes/api.php';
+require_once __DIR__ . '/lib/api.php';
 
 $action = requestAction();
 
