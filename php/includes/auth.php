@@ -12,7 +12,11 @@ function current_libstaff_id(): string
 {
     static $libstaffId = null;
     if ($libstaffId === null) {
-        require __DIR__ . '/../../db.php';
+        global $pdo;
+        if (!isset($pdo)) {
+            require __DIR__ . '/../../db.php';
+            $GLOBALS['pdo'] = $pdo;
+        }
         $stmt = $pdo->prepare('SELECT libstaff_id FROM library_staff WHERE user_id = ?');
         $stmt->execute([$_SESSION['user_id']]);
         $libstaffId = (string) $stmt->fetchColumn();

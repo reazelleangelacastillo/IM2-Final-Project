@@ -793,7 +793,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $view === 'periodicals' ? 'Periodicals' : 'Books'; ?> | BookTrace</title>
-    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261120-3">
+    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261121-1">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/dialog.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
