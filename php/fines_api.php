@@ -49,7 +49,7 @@ try {
             $sql .= ' AND (f.fine_id LIKE ? OR f.borrow_id LIKE ? OR br.borrower_id LIKE ? OR CONCAT(u.user_fname, \' \', u.user_lname) LIKE ?)';
             array_push($params, $like, $like, $like, $like);
         }
-        $sql .= ' ORDER BY (f.status = \'Unpaid\') DESC, f.date_assessed DESC, f.fine_id DESC LIMIT 300';
+        $sql .= ' ORDER BY (f.status = \'Unpaid\') DESC, f.fine_id DESC LIMIT 300';
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         respond(['ok' => true, 'fines' => $stmt->fetchAll()]);
