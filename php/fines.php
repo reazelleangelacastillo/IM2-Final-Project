@@ -14,7 +14,7 @@ $pageStyles = ['fines.css'];
 
 <main class="page-container">
     <section class="card">
-        <h2 class="page-title"><i class="bi bi-cash-coin"></i> Fines</h2>
+        <h2 class="page-title">Fines</h2>
         <p class="page-note">Fines are recorded when an overdue book is returned.</p>
         <div class="summary-grid" id="summary-grid"></div>
     </section>
@@ -36,7 +36,7 @@ $pageStyles = ['fines.css'];
     </section>
 
     <section class="card">
-        <h2 class="page-title"><i class="bi bi-hourglass-split"></i> Overdue Now</h2>
+        <h2 class="page-title">Overdue Now</h2>
         <p class="page-note">Books overdue and not yet returned. These are not fines yet. A fine is recorded when the book is returned.</p>
         <div class="table-wrap" id="overdue-list"></div>
     </section>
