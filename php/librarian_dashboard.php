@@ -10,6 +10,32 @@ if (!$conn) {
     die("Connection failed: " . mysqli_connect_error());
 }
 
+function dashboardTableColumns(mysqli $conn, string $table): array
+{
+    if (!in_array($table, ['books', 'periodicals', 'publication'], true)) {
+        throw new InvalidArgumentException('Unsupported dashboard table.');
+    }
+
+    $result = mysqli_query($conn, "SHOW COLUMNS FROM `$table`");
+    $columns = [];
+    while ($column = mysqli_fetch_assoc($result)) {
+        $columns[$column['Field']] = true;
+    }
+    mysqli_free_result($result);
+
+    return $columns;
+}
+
+function dashboardBindParams(mysqli_stmt $stmt, string $types, array $values): void
+{
+    $params = [$stmt, $types];
+    for ($index = 0; $index < count($values); $index++) {
+        $params[] = &$values[$index];
+    }
+
+    call_user_func_array('mysqli_stmt_bind_param', $params);
+}
+
 function dashboardDateIsValid(string $value): bool
 {
     $date = DateTime::createFromFormat('!Y-m-d', $value);
@@ -212,6 +238,13 @@ function dashboardPeriodicalTypes(): array
     ];
 }
 
+$book_columns = dashboardTableColumns($conn, 'books');
+$periodical_columns = dashboardTableColumns($conn, 'periodicals');
+$publication_columns = dashboardTableColumns($conn, 'publication');
+$publisher_id_select = isset($publication_columns['publisher_id'])
+    ? 'publication.publisher_id'
+    : 'NULL AS publisher_id';
+
 $add_message = "";
 $add_message_class = "";
 $publication_message = "";
@@ -302,14 +335,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $add_message_class = "alert-danger";
         } else {
             mysqli_begin_transaction($conn);
-            $insert = mysqli_prepare($conn, "
-                INSERT INTO publication
-                    (pub_id, title, series, edition, date_published, shelf_location, language_used, publisher_id, subtitle, pages, copyright_date, publisher, place_of_publication)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            mysqli_stmt_bind_param(
-                $insert,
-                "sssssssss" . "iiss",
+            $publication_insert_columns = [
+                'pub_id',
+                'title',
+                'series',
+                'edition',
+                'date_published',
+                'shelf_location',
+                'language_used',
+                'subtitle',
+                'pages',
+                'copyright_date',
+                'publisher',
+                'place_of_publication'
+            ];
+            $publication_insert_values = [
                 $pub_id,
                 $title,
                 $series,
@@ -317,13 +357,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $date_published,
                 $shelf_location,
                 $language_used,
-                $publisher_id,
                 $subtitle,
                 $pages,
                 $copyright_date,
                 $publisher,
                 $place_of_publication
-            );
+            ];
+            $publication_insert_types = "ssssssss" . "iiss";
+            if (isset($publication_columns['publisher_id'])) {
+                array_splice($publication_insert_columns, 7, 0, ['publisher_id']);
+                array_splice($publication_insert_values, 7, 0, [$publisher_id]);
+                $publication_insert_types = "sssssssss" . "iiss";
+            }
+            $insert_sql = "INSERT INTO publication (" . implode(', ', $publication_insert_columns) . ")
+                VALUES (" . implode(', ', array_fill(0, count($publication_insert_columns), '?')) . ")";
+            $insert = mysqli_prepare($conn, $insert_sql);
+            dashboardBindParams($insert, $publication_insert_types, $publication_insert_values);
 
             if (mysqli_stmt_execute($insert)) {
                 $insert_book = mysqli_prepare($conn, "
@@ -429,11 +478,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $periodical_message = "ISSN ($issn) is already in use. Enter a unique ISSN.";
             $periodical_message_class = "alert-danger";
         } else {
-            $update_periodical = mysqli_prepare($conn, "
+            $periodical_update_sql = "
                 UPDATE periodicals
-                SET ISSN = ?, pub_id = ?, peridodic_type = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE ISSN = ?
-            ");
+                SET ISSN = ?, pub_id = ?, peridodic_type = ?
+            ";
+            if (isset($periodical_columns['updated_at'])) {
+                $periodical_update_sql .= ", updated_at = CURRENT_TIMESTAMP";
+            }
+            $periodical_update_sql .= " WHERE ISSN = ?";
+            $update_periodical = mysqli_prepare($conn, $periodical_update_sql);
             mysqli_stmt_bind_param($update_periodical, "ssss", $issn, $pub_id, $periodical_type, $original_issn);
 
             if (mysqli_stmt_execute($update_periodical)) {
@@ -524,19 +577,63 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $publication_message_class = "alert-danger";
         } else {
             mysqli_begin_transaction($conn);
-            $update = mysqli_prepare($conn, "
-                UPDATE publication
-                SET pub_id=?, title=?, series=?, edition=?, date_published=?, shelf_location=?, language_used=?, publisher_id=?, subtitle=?, pages=?, copyright_date=?, publisher=?, place_of_publication=?
-                WHERE pub_id=?
-            ");
-            mysqli_stmt_bind_param($update, "sssssssss" . "iisss", $pub_id, $title, $series, $edition, $date_published, $shelf_location, $language_used, $publisher_id, $subtitle, $pages, $copyright_date, $publisher, $place_of_publication, $original_pub_id);
+            $publication_update_columns = [
+                'pub_id',
+                'title',
+                'series',
+                'edition',
+                'date_published',
+                'shelf_location',
+                'language_used',
+                'subtitle',
+                'pages',
+                'copyright_date',
+                'publisher',
+                'place_of_publication'
+            ];
+            $publication_update_values = [
+                $pub_id,
+                $title,
+                $series,
+                $edition,
+                $date_published,
+                $shelf_location,
+                $language_used,
+                $subtitle,
+                $pages,
+                $copyright_date,
+                $publisher,
+                $place_of_publication
+            ];
+            $publication_update_types = "ssssssss" . "iisss";
+            if (isset($publication_columns['publisher_id'])) {
+                array_splice($publication_update_columns, 7, 0, ['publisher_id']);
+                array_splice($publication_update_values, 7, 0, [$publisher_id]);
+                $publication_update_types = "sssssssss" . "iisss";
+            }
+            $publication_update_assignments = array_map(
+                static function (string $column): string {
+                    return "$column = ?";
+                },
+                $publication_update_columns
+            );
+            $publication_update_values[] = $original_pub_id;
+            $publication_update_sql = "UPDATE publication SET "
+                . implode(', ', $publication_update_assignments)
+                . " WHERE pub_id = ?";
+            $update = mysqli_prepare($conn, $publication_update_sql);
+            dashboardBindParams($update, $publication_update_types, $publication_update_values);
 
             if (mysqli_stmt_execute($update)) {
-                $update_book = mysqli_prepare($conn, "
+                $book_update_sql = "
                     UPDATE books
-                    SET class_no = ?, call_no = ?, ISBN = ?, category = ?, audience_type = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE pub_id = ?
-                ");
+                    SET class_no = ?, call_no = ?, ISBN = ?, category = ?, audience_type = ?
+                ";
+                if (isset($book_columns['updated_at'])) {
+                    $book_update_sql .= ", updated_at = CURRENT_TIMESTAMP";
+                }
+                $book_update_sql .= " WHERE pub_id = ?";
+                $update_book = mysqli_prepare($conn, $book_update_sql);
                 mysqli_stmt_bind_param($update_book, "ssssss", $class_no, $call_no, $isbn, $category, $audience_type, $pub_id);
 
                 if (mysqli_stmt_execute($update_book)) {
@@ -632,10 +729,28 @@ $periodical_sort_orders = [
     'az' => 'publication.title ASC',
     'za' => 'publication.title DESC'
 ];
+$book_sort_options = $sort_options;
+$periodical_sort_options = $sort_options;
+foreach ([
+    'recently_added' => 'created_at',
+    'oldest_added' => 'created_at',
+    'recently_updated' => 'updated_at',
+    'oldest_updated' => 'updated_at',
+    'recently_acquired' => 'acquired_at'
+] as $sort_key => $column) {
+    if (!isset($book_columns[$column])) {
+        unset($book_sort_options[$sort_key], $book_sort_orders[$sort_key]);
+    }
+    if (!isset($periodical_columns[$column])) {
+        unset($periodical_sort_options[$sort_key], $periodical_sort_orders[$sort_key]);
+    }
+}
 $book_sort = $_GET['book_sort'] ?? 'recently_added';
-$book_sort = is_string($book_sort) && isset($book_sort_orders[$book_sort]) ? $book_sort : 'recently_added';
+$book_default_sort = isset($book_sort_options['recently_added']) ? 'recently_added' : 'newest_published';
+$book_sort = is_string($book_sort) && isset($book_sort_options[$book_sort]) ? $book_sort : $book_default_sort;
 $periodical_sort = $_GET['periodical_sort'] ?? 'recently_added';
-$periodical_sort = is_string($periodical_sort) && isset($periodical_sort_orders[$periodical_sort]) ? $periodical_sort : 'recently_added';
+$periodical_default_sort = isset($periodical_sort_options['recently_added']) ? 'recently_added' : 'newest_published';
+$periodical_sort = is_string($periodical_sort) && isset($periodical_sort_options[$periodical_sort]) ? $periodical_sort : $periodical_default_sort;
 $book_order_by = $book_sort_orders[$book_sort] . ', publication.pub_id ASC';
 $periodical_order_by = $periodical_sort_orders[$periodical_sort] . ', periodicals.ISSN ASC';
 $publication_status_query = "
@@ -646,10 +761,7 @@ $publication_status_query = "
         books.call_no,
         books.ISBN,
         books.category,
-        books.audience_type,
-        books.created_at,
-        books.updated_at,
-        books.acquired_at
+        books.audience_type
     FROM publication
     INNER JOIN books ON books.pub_id = publication.pub_id
     LEFT JOIN periodicals ON periodicals.pub_id = publication.pub_id
@@ -701,15 +813,12 @@ $periodicals_sql = "
         publication.date_published,
         publication.shelf_location,
         publication.language_used,
-        publication.publisher_id,
+        $publisher_id_select,
         publication.subtitle,
         publication.pages,
         publication.copyright_date,
         publication.publisher,
         publication.place_of_publication,
-        periodicals.created_at,
-        periodicals.updated_at,
-        periodicals.acquired_at,
         COALESCE(book_status_summary.book_status, 'Available') AS book_status
     FROM periodicals
     INNER JOIN publication ON publication.pub_id = periodicals.pub_id
@@ -723,32 +832,27 @@ $periodicals_sql = "
 ";
 
 if ($periodical_search_query !== '') {
+    $periodical_search_conditions = [
+        'periodicals.ISSN LIKE ?',
+        'periodicals.pub_id LIKE ?',
+        'publication.title LIKE ?',
+        'publication.subtitle LIKE ?',
+        'publication.language_used LIKE ?'
+    ];
+    if (isset($publication_columns['publisher_id'])) {
+        $periodical_search_conditions[] = 'publication.publisher_id LIKE ?';
+    }
+    $periodical_search_conditions = array_merge($periodical_search_conditions, [
+        'publication.publisher LIKE ?',
+        'publication.place_of_publication LIKE ?',
+        'periodicals.peridodic_type LIKE ?'
+    ]);
+    $periodical_search_values = array_fill(0, count($periodical_search_conditions), "%" . $periodical_search_query . "%");
     $periodicals_stmt = mysqli_prepare($conn, $periodicals_sql . "
-        WHERE periodicals.ISSN LIKE ?
-           OR periodicals.pub_id LIKE ?
-           OR publication.title LIKE ?
-           OR publication.subtitle LIKE ?
-           OR publication.language_used LIKE ?
-           OR publication.publisher_id LIKE ?
-           OR publication.publisher LIKE ?
-           OR publication.place_of_publication LIKE ?
-           OR periodicals.peridodic_type LIKE ?
+        WHERE " . implode("\n           OR ", $periodical_search_conditions) . "
         ORDER BY $periodical_order_by
     ");
-    $periodical_search_param = "%" . $periodical_search_query . "%";
-    mysqli_stmt_bind_param(
-        $periodicals_stmt,
-        "sssssssss",
-        $periodical_search_param,
-        $periodical_search_param,
-        $periodical_search_param,
-        $periodical_search_param,
-        $periodical_search_param,
-        $periodical_search_param,
-        $periodical_search_param,
-        $periodical_search_param,
-        $periodical_search_param
-    );
+    dashboardBindParams($periodicals_stmt, str_repeat('s', count($periodical_search_values)), $periodical_search_values);
     mysqli_stmt_execute($periodicals_stmt);
     $periodicals_result = mysqli_stmt_get_result($periodicals_stmt);
 } else {
@@ -764,7 +868,7 @@ $publication_options_sql = "
         publication.pages,
         publication.series,
         publication.edition,
-        publication.publisher_id,
+        $publisher_id_select,
         publication.publisher,
         publication.place_of_publication,
         publication.date_published,
@@ -1201,7 +1305,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                     <input type="hidden" name="scroll_position" value="0">
                     <input type="text" name="search" placeholder="Search Title, ID, Subtitle, or Language..." value="<?php echo htmlspecialchars($search_query); ?>" class="search-input-box">
                     <select name="book_sort" class="sort-select" aria-label="Sort books" onchange="this.form.elements.scroll_position.value = Math.round(window.scrollY); this.form.submit()">
-                        <?php foreach ($sort_options as $sortValue => $sortLabel): ?>
+                        <?php foreach ($book_sort_options as $sortValue => $sortLabel): ?>
                             <option value="<?php echo htmlspecialchars($sortValue); ?>" <?php echo $book_sort === $sortValue ? 'selected' : ''; ?>><?php echo htmlspecialchars($sortLabel); ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -1337,7 +1441,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                     <input type="hidden" name="scroll_position" value="0">
                     <input type="text" name="periodical_search" placeholder="Search ISSN, Publication ID, Title, or Type..." value="<?php echo htmlspecialchars($periodical_search_query); ?>" class="search-input-box">
                     <select name="periodical_sort" class="sort-select" aria-label="Sort periodicals" onchange="this.form.elements.scroll_position.value = Math.round(window.scrollY); this.form.submit()">
-                        <?php foreach ($sort_options as $sortValue => $sortLabel): ?>
+                        <?php foreach ($periodical_sort_options as $sortValue => $sortLabel): ?>
                             <option value="<?php echo htmlspecialchars($sortValue); ?>" <?php echo $periodical_sort === $sortValue ? 'selected' : ''; ?>><?php echo htmlspecialchars($sortLabel); ?></option>
                         <?php endforeach; ?>
                     </select>

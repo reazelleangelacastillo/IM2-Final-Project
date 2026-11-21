@@ -997,10 +997,11 @@ WHERE `pub_id` REGEXP '^PUB[0-9]{3}$'
 --
 
 CREATE TABLE `reports` (
-  `report_id` varchar(20) NOT NULL,
+  `report_id` int(11) NOT NULL AUTO_INCREMENT,
   `libstaff_id` varchar(20) DEFAULT NULL,
-  `report_type` varchar(50) NOT NULL CHECK (`report_type` in ('Monthly','Annual')),
-  `date_generated` datetime DEFAULT NULL
+  `report_type` enum('Weekly','Monthly','Annual') NOT NULL,
+  `date_generated` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`report_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1008,9 +1009,9 @@ CREATE TABLE `reports` (
 --
 
 INSERT INTO `reports` (`report_id`, `libstaff_id`, `report_type`, `date_generated`) VALUES
-('1', 'LIB001', 'Monthly', '2026-04-30 00:00:00'),
-('2', 'LIB001', 'Annual', '2025-12-31 00:00:00'),
-('3', 'LIB001', 'Monthly', '2026-05-15 00:00:00');
+(1, 'LIB001', 'Monthly', '2026-04-30 00:00:00'),
+(2, 'LIB001', 'Annual', '2025-12-31 00:00:00'),
+(3, 'LIB001', 'Monthly', '2026-05-15 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -1317,7 +1318,6 @@ ALTER TABLE `publication`
 -- Indexes for table `reports`
 --
 ALTER TABLE `reports`
-  ADD PRIMARY KEY (`report_id`),
   ADD KEY `libclerk_id` (`libstaff_id`);
 
 --

@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: librarian_dashboard.php');
                 exit;
             } elseif ($user['user_type'] === 'Library Clerk') {
-                header('Location: ../libclerk_dashboard.php');
+                header('Location: librarian_dashboard.php');
                 exit;
             }
 
