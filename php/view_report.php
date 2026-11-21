@@ -21,6 +21,8 @@ $totalBooksBorrowed = 0;
 $totalBooksReturned = 0;
 $activeBorrowers = [];
 $transactionCount = 0;
+$grain = 'day';
+$grainName = 'Day';
 
 if (!is_string($reportId) || !ctype_digit($reportId)) {
     http_response_code(400);
@@ -49,20 +51,36 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
                     $periodStart = $currentWeekStart->modify('-1 week');
                     $periodEnd = $currentWeekStart;
                     $reportPeriodLabel = 'Previous calendar week';
+                    $grain = 'day';
+                    $grainName = 'Day';
                     break;
                 case 'Monthly':
                     $periodStart = $generatedAt->modify('first day of this month')->setTime(0, 0);
                     $periodEnd = $periodStart->modify('+1 month');
                     $reportPeriodLabel = $generatedAt->format('F Y');
+                    $grain = 'week';
+                    $grainName = 'Week';
                     break;
                 case 'Annual':
                     $periodStart = $generatedAt->setDate((int)$generatedAt->format('Y'), 1, 1)->setTime(0, 0);
                     $periodEnd = $periodStart->modify('+1 year');
                     $reportPeriodLabel = $generatedAt->format('Y');
+                    $grain = 'month';
+                    $grainName = 'Month';
                     break;
                 default:
                     throw new UnexpectedValueException('This report has an unsupported report type.');
             }
+
+            $bucketSql = [
+                'day' => 'DATE(%s)',
+                'week' => 'DATE_SUB(DATE(%s), INTERVAL WEEKDAY(%s) DAY)',
+                'month' => "DATE_FORMAT(%s, '%%Y-%%m-01')"
+            ][$grain];
+            $bucketBorrowed = str_replace('%s', 'date_borrowed', $bucketSql);
+            $bucketReturned = str_replace('%s', 'date_returned', $bucketSql);
+            $bucketBorrowed = str_replace('%%', '%', $bucketBorrowed);
+            $bucketReturned = str_replace('%%', '%', $bucketReturned);
 
             $activityStmt = $pdo->prepare(
                 "SELECT activity_date,
@@ -70,11 +88,11 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
                         SUM(event_type = 'returned') AS books_returned,
                         COUNT(DISTINCT CASE WHEN event_type = 'borrowed' THEN user_id END) AS borrowers
                  FROM (
-                     SELECT DATE(date_borrowed) AS activity_date, 'borrowed' AS event_type, user_id
+                     SELECT {$bucketBorrowed} AS activity_date, 'borrowed' AS event_type, user_id
                      FROM borrows
                      WHERE date_borrowed >= ? AND date_borrowed < ?
                      UNION ALL
-                     SELECT DATE(date_returned) AS activity_date, 'returned' AS event_type, user_id
+                     SELECT {$bucketReturned} AS activity_date, 'returned' AS event_type, user_id
                      FROM borrows
                      WHERE date_returned >= ? AND date_returned < ?
                  ) AS report_activity
@@ -105,16 +123,40 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
                 $activityByDate[$activity['activity_date']] = $activity;
             }
 
-            $dateRange = new DatePeriod($periodStart, new DateInterval('P1D'), $periodEnd);
-            foreach ($dateRange as $date) {
-                $dateKey = $date->format('Y-m-d');
+            $buckets = [];
+            if ($grain === 'day') {
+                foreach (new DatePeriod($periodStart, new DateInterval('P1D'), $periodEnd) as $date) {
+                    $buckets[] = ['key' => $date->format('Y-m-d'), 'label' => $date->format('D M d')];
+                }
+            } elseif ($grain === 'week') {
+                $cursor = $periodStart->modify('monday this week')->setTime(0, 0);
+                $lastDay = $periodEnd->modify('-1 day');
+                while ($cursor < $periodEnd) {
+                    $labelStart = max($cursor, $periodStart);
+                    $labelEnd = min($cursor->modify('+6 days'), $lastDay);
+                    $buckets[] = [
+                        'key' => $cursor->format('Y-m-d'),
+                        'label' => $labelStart->format('M d') . ' - ' . $labelEnd->format('M d')
+                    ];
+                    $cursor = $cursor->modify('+1 week');
+                }
+            } else {
+                $cursor = $periodStart;
+                while ($cursor < $periodEnd) {
+                    $buckets[] = ['key' => $cursor->format('Y-m-01'), 'label' => $cursor->format('M Y')];
+                    $cursor = $cursor->modify('+1 month');
+                }
+            }
+
+            foreach ($buckets as $bucket) {
+                $dateKey = $bucket['key'];
                 $activity = $activityByDate[$dateKey] ?? [];
                 $booksBorrowed = (int)($activity['books_borrowed'] ?? 0);
                 $booksReturned = (int)($activity['books_returned'] ?? 0);
                 $totalBooksBorrowed += $booksBorrowed;
                 $totalBooksReturned += $booksReturned;
                 $reportDates[] = [
-                    'date' => $dateKey,
+                    'date' => $bucket['label'],
                     'books_borrowed' => $booksBorrowed,
                     'books_returned' => $booksReturned,
                     'borrowers' => (int)($activity['borrowers'] ?? 0)
@@ -194,7 +236,7 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
             <h2 class="page-title">Charts</h2>
             <div class="chart-grid">
                 <div class="chart-box">
-                    <h3>Daily Activity</h3>
+                    <h3>Activity by <?php echo $grainName; ?></h3>
                     <div class="chart-canvas">
                         <canvas id="dailyActivityChart" aria-label="Line chart of daily borrowed and returned books"></canvas>
                     </div>
@@ -209,13 +251,13 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
         </section>
 
         <section class="card">
-            <h2 class="page-title">Daily Activity: <?php echo htmlspecialchars($reportPeriodLabel); ?></h2>
-            <p class="page-note">Borrowers are counted once per day, based on distinct users who borrowed at least one book that day.</p>
+            <h2 class="page-title">Activity by <?php echo $grainName; ?>: <?php echo htmlspecialchars($reportPeriodLabel); ?></h2>
+            <p class="page-note">Borrowers are counted once per <?php echo strtolower($grainName); ?>, based on distinct users who borrowed at least one book in that <?php echo strtolower($grainName); ?>.</p>
             <div class="reports-scroll">
                 <table class="mini-table">
                     <thead>
                         <tr>
-                            <th>Date</th>
+                            <th><?php echo $grainName; ?></th>
                             <th>Books Borrowed</th>
                             <th>Books Returned</th>
                             <th>Borrowers</th>
@@ -281,6 +323,7 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
         const returnedCounts = <?php echo json_encode(array_column($reportDates, 'books_returned'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
         Chart.defaults.font.family = "'Poppins', sans-serif";
+        Chart.defaults.elements.point.hoverRadius = 5;
 
         new Chart(document.getElementById('dailyActivityChart'), {
             type: 'line',
@@ -315,7 +358,16 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
                         position: 'bottom'
                     }
                 },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
                 scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
                     y: {
                         beginAtZero: true,
                         ticks: {
