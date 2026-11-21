@@ -59,7 +59,7 @@ try {
             $sql .= ' AND br.borrower_id = ?';
             $params[] = $id;
         }
-        $stmt = $pdo->prepare($sql . ' ORDER BY b.due_date LIMIT 200');
+        $stmt = $pdo->prepare($sql . ' ORDER BY (b.due_date < NOW()) DESC, hours_late DESC, b.borrow_id DESC LIMIT 200');
         $stmt->execute($params);
         respond(['ok' => true, 'borrows' => $stmt->fetchAll()]);
     }
