@@ -1009,6 +1009,7 @@ CREATE TABLE `reports` (
   `libstaff_id` varchar(20) DEFAULT NULL,
   `report_type` enum('Weekly','Monthly','Annual') NOT NULL,
   `date_generated` datetime NOT NULL DEFAULT current_timestamp(),
+  `period_start` date DEFAULT NULL,
   PRIMARY KEY (`report_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -1016,10 +1017,10 @@ CREATE TABLE `reports` (
 -- Dumping data for table `reports`
 --
 
-INSERT INTO `reports` (`report_id`, `libstaff_id`, `report_type`, `date_generated`) VALUES
-(1, 'LIB001', 'Monthly', '2026-04-30 00:00:00'),
-(2, 'LIB001', 'Annual', '2025-12-31 00:00:00'),
-(3, 'LIB001', 'Monthly', '2026-05-15 00:00:00');
+INSERT INTO `reports` (`report_id`, `libstaff_id`, `report_type`, `date_generated`, `period_start`) VALUES
+(1, 'LIB001', 'Monthly', '2026-04-30 00:00:00', '2026-04-01'),
+(2, 'LIB001', 'Annual', '2025-12-31 00:00:00', '2025-01-01'),
+(3, 'LIB001', 'Monthly', '2026-05-15 00:00:00', '2026-05-01');
 
 -- --------------------------------------------------------
 

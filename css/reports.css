@@ -94,6 +94,17 @@
     margin-bottom: 14px;
 }
 
+.period-field[hidden] {
+    display: none;
+}
+
+.period-hint {
+    padding-left: 12px;
+    color: #746b79;
+    font-size: 12px;
+    min-height: 18px;
+}
+
 .back-link {
     margin-bottom: 18px;
     text-decoration: none;
