@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/lib/auth.php';
+require_once __DIR__ . '/lib/report_period.php';
 try {
     require '../db.php';
 } catch (PDOException $e) {
@@ -8,7 +9,7 @@ try {
 }
 
 $pageTitle = 'Report Details';
-$pageStyles = ['reports.css?v=20261121-4'];
+$pageStyles = ['reports.css?v=20261121-5'];
 
 $report = null;
 $pageError = '';
@@ -30,7 +31,7 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
 } else {
     try {
         $stmt = $pdo->prepare(
-            'SELECT report_id, libstaff_id, report_type, date_generated
+            'SELECT report_id, libstaff_id, report_type, date_generated, period_start
              FROM reports
              WHERE report_id = ?'
         );
@@ -44,27 +45,24 @@ if (!is_string($reportId) || !ctype_digit($reportId)) {
             $pageError = 'This report has no generation date, so its reporting period cannot be determined.';
         } else {
             $generatedAt = new DateTimeImmutable($report['date_generated']);
-            $currentWeekStart = $generatedAt->modify('monday this week')->setTime(0, 0);
+            $periodStart = report_period_start((string)$report['report_type'], $report['period_start'], $generatedAt);
 
             switch ($report['report_type']) {
                 case 'Weekly':
-                    $periodStart = $currentWeekStart->modify('-1 week');
-                    $periodEnd = $currentWeekStart;
-                    $reportPeriodLabel = 'Previous calendar week';
+                    $periodEnd = $periodStart->modify('+1 week');
+                    $reportPeriodLabel = report_period_label('Weekly', $periodStart);
                     $grain = 'day';
                     $grainName = 'Day';
                     break;
                 case 'Monthly':
-                    $periodStart = $generatedAt->modify('first day of this month')->setTime(0, 0);
                     $periodEnd = $periodStart->modify('+1 month');
-                    $reportPeriodLabel = $generatedAt->format('F Y');
+                    $reportPeriodLabel = report_period_label('Monthly', $periodStart);
                     $grain = 'week';
                     $grainName = 'Week';
                     break;
                 case 'Annual':
-                    $periodStart = $generatedAt->setDate((int)$generatedAt->format('Y'), 1, 1)->setTime(0, 0);
                     $periodEnd = $periodStart->modify('+1 year');
-                    $reportPeriodLabel = $generatedAt->format('Y');
+                    $reportPeriodLabel = report_period_label('Annual', $periodStart);
                     $grain = 'month';
                     $grainName = 'Month';
                     break;
