@@ -639,10 +639,26 @@ $periodical_sort = $_GET['periodical_sort'] ?? 'recently_added';
 $periodical_sort = is_string($periodical_sort) && isset($periodical_sort_orders[$periodical_sort]) ? $periodical_sort : 'recently_added';
 $book_order_by = $book_sort_orders[$book_sort] . ', publication.pub_id ASC';
 $periodical_order_by = $periodical_sort_orders[$periodical_sort] . ', periodicals.ISSN ASC';
+$copy_summary_join = "
+    LEFT JOIN (
+        SELECT pc.pub_id,
+               COUNT(*) AS total_copies,
+               SUM(s.status_type = 'Available' AND s.`condition` = 'Good') AS available_copies,
+               CASE
+                   WHEN SUM(s.status_type = 'Available' AND s.`condition` = 'Good') > 0 THEN 'Available'
+                   WHEN SUM(s.status_type = 'Borrowed') > 0 THEN 'Borrowed'
+                   ELSE 'Unavailable'
+               END AS book_status
+        FROM `pub copies` pc
+        LEFT JOIN status s ON s.status_id = pc.status_id
+        GROUP BY pc.pub_id
+    ) AS book_status_summary ON book_status_summary.pub_id = publication.pub_id";
 $publication_status_query = "
     SELECT
         publication.*,
-        COALESCE(book_status_summary.book_status, 'Available') AS book_status,
+        COALESCE(book_status_summary.total_copies, 0) AS total_copies,
+        COALESCE(book_status_summary.available_copies, 0) AS available_copies,
+        COALESCE(book_status_summary.book_status, 'Unavailable') AS book_status,
         books.class_no,
         books.call_no,
         books.ISBN,
@@ -654,13 +670,7 @@ $publication_status_query = "
     FROM publication
     INNER JOIN books ON books.pub_id = publication.pub_id
     LEFT JOIN periodicals ON periodicals.pub_id = publication.pub_id
-    LEFT JOIN (
-        SELECT pc.pub_id,
-               CASE WHEN SUM(s.status_type = 'Borrowed') > 0 THEN 'Borrowed' ELSE 'Available' END AS book_status
-        FROM `pub copies` pc
-        LEFT JOIN status s ON s.status_id = pc.status_id
-        GROUP BY pc.pub_id
-    ) AS book_status_summary ON book_status_summary.pub_id = publication.pub_id
+    {$copy_summary_join}
     WHERE periodicals.pub_id IS NULL
 ";
 
@@ -671,7 +681,7 @@ if (!empty($search_query)) {
                 OR publication.title LIKE ?
                 OR publication.subtitle LIKE ?
                 OR publication.language_used LIKE ?
-                OR book_status_summary.book_status LIKE ?
+                OR COALESCE(book_status_summary.book_status, 'Unavailable') LIKE ?
                 OR books.class_no LIKE ?
                 OR books.call_no LIKE ?
                 OR books.ISBN LIKE ?
@@ -682,7 +692,8 @@ if (!empty($search_query)) {
     
     $stmt_search = mysqli_prepare($conn, $sql);
     $search_param = "%" . $search_query . "%";
-    mysqli_stmt_bind_param($stmt_search, "ssssssssss", $search_param, $search_param, $search_param, $search_param, $search_param, $search_param, $search_param, $search_param, $search_param, $search_param);
+    $status_search_param = $search_query . "%";
+    mysqli_stmt_bind_param($stmt_search, "ssssssssss", $search_param, $search_param, $search_param, $search_param, $status_search_param, $search_param, $search_param, $search_param, $search_param, $search_param);
     mysqli_stmt_execute($stmt_search);
     $result = mysqli_stmt_get_result($stmt_search);
 } else {
@@ -711,16 +722,12 @@ $periodicals_sql = "
         periodicals.created_at,
         periodicals.updated_at,
         periodicals.acquired_at,
-        COALESCE(book_status_summary.book_status, 'Available') AS book_status
+        COALESCE(book_status_summary.total_copies, 0) AS total_copies,
+        COALESCE(book_status_summary.available_copies, 0) AS available_copies,
+        COALESCE(book_status_summary.book_status, 'Unavailable') AS book_status
     FROM periodicals
     INNER JOIN publication ON publication.pub_id = periodicals.pub_id
-    LEFT JOIN (
-        SELECT pc.pub_id,
-               CASE WHEN SUM(s.status_type = 'Borrowed') > 0 THEN 'Borrowed' ELSE 'Available' END AS book_status
-        FROM `pub copies` pc
-        LEFT JOIN status s ON s.status_id = pc.status_id
-        GROUP BY pc.pub_id
-    ) AS book_status_summary ON book_status_summary.pub_id = publication.pub_id
+    {$copy_summary_join}
 ";
 
 if ($periodical_search_query !== '') {
@@ -734,12 +741,14 @@ if ($periodical_search_query !== '') {
            OR publication.publisher LIKE ?
            OR publication.place_of_publication LIKE ?
            OR periodicals.peridodic_type LIKE ?
+           OR COALESCE(book_status_summary.book_status, 'Unavailable') LIKE ?
         ORDER BY $periodical_order_by
     ");
     $periodical_search_param = "%" . $periodical_search_query . "%";
+    $periodical_status_param = $periodical_search_query . "%";
     mysqli_stmt_bind_param(
         $periodicals_stmt,
-        "sssssssss",
+        "ssssssssss",
         $periodical_search_param,
         $periodical_search_param,
         $periodical_search_param,
@@ -748,7 +757,8 @@ if ($periodical_search_query !== '') {
         $periodical_search_param,
         $periodical_search_param,
         $periodical_search_param,
-        $periodical_search_param
+        $periodical_search_param,
+        $periodical_status_param
     );
     mysqli_stmt_execute($periodicals_stmt);
     $periodicals_result = mysqli_stmt_get_result($periodicals_stmt);
@@ -770,15 +780,11 @@ $publication_options_sql = "
         publication.place_of_publication,
         publication.date_published,
         publication.copyright_date,
-        COALESCE(book_status_summary.book_status, 'Available') AS book_status
+        COALESCE(book_status_summary.total_copies, 0) AS total_copies,
+        COALESCE(book_status_summary.available_copies, 0) AS available_copies,
+        COALESCE(book_status_summary.book_status, 'Unavailable') AS book_status
     FROM publication
-    LEFT JOIN (
-        SELECT pc.pub_id,
-               CASE WHEN SUM(s.status_type = 'Borrowed') > 0 THEN 'Borrowed' ELSE 'Available' END AS book_status
-        FROM `pub copies` pc
-        LEFT JOIN status s ON s.status_id = pc.status_id
-        GROUP BY pc.pub_id
-    ) AS book_status_summary ON book_status_summary.pub_id = publication.pub_id
+    {$copy_summary_join}
 ";
 $publication_options_result = mysqli_query($conn, $publication_options_sql);
 $publication_details = [];
@@ -796,7 +802,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261121-2">
+    <link rel="stylesheet" href="../css/librarian_dashboard.css?v=20261122-1">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/dialog.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -1254,7 +1260,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                         <th>Category</th>
                         <th>Language</th>
                         <th>Shelf</th>
-                        <th>Status</th>
+                        <th>Availability</th>
                         <th>ISBN</th>
                     </tr>
                 </thead>
@@ -1278,6 +1284,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                         data-datepub="<?php echo htmlspecialchars($row['date_published']); ?>"
                         data-copyright="<?php echo htmlspecialchars($row['copyright_date']); ?>"
                         data-status="<?php echo htmlspecialchars($row['book_status']); ?>"
+                        data-copies="<?php echo $row['total_copies'] > 0 ? htmlspecialchars($row['available_copies'] . ' / ' . $row['total_copies']) : 'No copies'; ?>"
                         data-class-no="<?php echo htmlspecialchars($row['class_no'] ?? ''); ?>"
                         data-call-no="<?php echo htmlspecialchars($row['call_no'] ?? ''); ?>"
                         data-isbn="<?php echo htmlspecialchars($row['ISBN'] ?? ''); ?>"
@@ -1289,7 +1296,10 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                         <td><?php echo htmlspecialchars($row['category'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($row['language_used']); ?></td>
                         <td><?php echo htmlspecialchars($row['shelf_location']); ?></td>
-                        <td><?php echo htmlspecialchars($row['book_status']); ?></td>
+                        <td>
+                            <div class="copies-count"><?php echo $row['total_copies'] > 0 ? htmlspecialchars($row['available_copies'] . ' / ' . $row['total_copies']) : 'No copies'; ?></div>
+                            <div class="availability availability-<?php echo htmlspecialchars(strtolower($row['book_status'])); ?>"><?php echo htmlspecialchars($row['book_status']); ?></div>
+                        </td>
                         <td><?php echo htmlspecialchars($row['ISBN'] ?? ''); ?></td>
                     </tr>
                     <?php
@@ -1360,7 +1370,7 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                         <th>ISSN</th>
                         <th>Language</th>
                         <th>Shelf</th>
-                        <th>Status</th>
+                        <th>Availability</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1382,14 +1392,18 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                                 data-place-of-publication="<?php echo htmlspecialchars($periodical['place_of_publication'] ?? ''); ?>"
                                 data-datepub="<?php echo htmlspecialchars($periodical['date_published']); ?>"
                                 data-copyright="<?php echo htmlspecialchars($periodical['copyright_date']); ?>"
-                                data-status="<?php echo htmlspecialchars($periodical['book_status']); ?>">
+                                data-status="<?php echo htmlspecialchars($periodical['book_status']); ?>"
+                                data-copies="<?php echo $periodical['total_copies'] > 0 ? htmlspecialchars($periodical['available_copies'] . ' / ' . $periodical['total_copies']) : 'No copies'; ?>">
                                 <td><strong><?php echo htmlspecialchars($periodical['pub_id']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($periodical['title']); ?></td>
                                 <td><?php echo htmlspecialchars($periodical['peridodic_type']); ?></td>
                                 <td><?php echo htmlspecialchars($periodical['ISSN']); ?></td>
                                 <td><?php echo htmlspecialchars($periodical['language_used']); ?></td>
                                 <td><?php echo htmlspecialchars($periodical['shelf_location']); ?></td>
-                                <td><?php echo htmlspecialchars($periodical['book_status']); ?></td>
+                                <td>
+                                    <div class="copies-count"><?php echo $periodical['total_copies'] > 0 ? htmlspecialchars($periodical['available_copies'] . ' / ' . $periodical['total_copies']) : 'No copies'; ?></div>
+                                    <div class="availability availability-<?php echo htmlspecialchars(strtolower($periodical['book_status'])); ?>"><?php echo htmlspecialchars($periodical['book_status']); ?></div>
+                                </td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
@@ -1506,9 +1520,10 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function setStatusDisplay(display, status) {
-        const isBorrowed = String(status).toLowerCase() === "borrowed";
-        display.classList.toggle("is-borrowed", isBorrowed);
-        display.querySelector("[data-status-label]").textContent = isBorrowed ? "Borrowed" : "Available";
+        const labels = { borrowed: "Borrowed", unavailable: "Unavailable" };
+        const label = labels[String(status).toLowerCase()] || "Available";
+        display.classList.toggle("is-borrowed", label !== "Available");
+        display.querySelector("[data-status-label]").textContent = label;
     }
 
     function setAudienceType(select, customInput, value) {
@@ -1745,12 +1760,12 @@ document.addEventListener("DOMContentLoaded", function() {
         book: [
             ["Basic Info", [["Publication ID", "pubid"], ["Title", "title"], ["Subtitle", "subtitle"], ["Language", "language"], ["Pages", "pages"], ["Shelf", "shelf"]]],
             ["Publishing", [["Publisher ID", "publisher"], ["Publisher", "publisherName"], ["Place of Publication", "placeOfPublication"], ["Date Published", "datepub"], ["Copyright Year", "copyright"], ["Series", "series"], ["Edition", "edition"]]],
-            ["Classification", [["Category", "category"], ["Audience Type", "audienceType"], ["Class No.", "classNo"], ["Call No.", "callNo"], ["ISBN", "isbn"], ["Status", "status"]]]
+            ["Classification", [["Category", "category"], ["Audience Type", "audienceType"], ["Class No.", "classNo"], ["Call No.", "callNo"], ["ISBN", "isbn"], ["Status", "status"], ["Copies", "copies"]]]
         ],
         periodical: [
             ["Basic Info", [["Publication ID", "pubid"], ["Title", "title"], ["Subtitle", "subtitle"], ["Language", "language"], ["Pages", "pages"], ["Shelf", "shelf"]]],
             ["Publishing", [["Publisher ID", "publisher"], ["Publisher", "publisherName"], ["Place of Publication", "placeOfPublication"], ["Date Published", "datepub"], ["Copyright Year", "copyright"], ["Series", "series"], ["Edition", "edition"]]],
-            ["Classification", [["ISSN", "issn"], ["Periodical Type", "type"], ["Status", "status"]]]
+            ["Classification", [["ISSN", "issn"], ["Periodical Type", "type"], ["Status", "status"], ["Copies", "copies"]]]
         ]
     };
 
