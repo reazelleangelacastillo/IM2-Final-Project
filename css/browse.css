@@ -217,6 +217,16 @@ body {
     color: #92400e;
 }
 
+.status.unavailable {
+    background-color: #e5e7eb;
+    color: #4b5563;
+}
+
+.copies-line {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
 /* RESPONSIVE */
 
 @media (max-width: 768px) {

@@ -11,14 +11,30 @@ if (!$conn) {
 }
 
 $sql = "SELECT
-            pub_id,
-            title,
-            subtitle,
-            language_used,
-            shelf_location,
-            pages
+            publication.pub_id,
+            publication.title,
+            publication.subtitle,
+            publication.language_used,
+            publication.shelf_location,
+            publication.pages,
+            COALESCE(book_status_summary.total_copies, 0) AS total_copies,
+            COALESCE(book_status_summary.available_copies, 0) AS available_copies,
+            COALESCE(book_status_summary.book_status, 'Unavailable') AS book_status
         FROM publication
-        ORDER BY pub_id ASC";
+        LEFT JOIN (
+            SELECT pc.pub_id,
+                   COUNT(*) AS total_copies,
+                   SUM(s.status_type = 'Available' AND s.`condition` = 'Good') AS available_copies,
+                   CASE
+                       WHEN SUM(s.status_type = 'Available' AND s.`condition` = 'Good') > 0 THEN 'Available'
+                       WHEN SUM(s.status_type = 'Borrowed') > 0 THEN 'Borrowed'
+                       ELSE 'Unavailable'
+                   END AS book_status
+            FROM `pub copies` pc
+            LEFT JOIN status s ON s.status_id = pc.status_id
+            GROUP BY pc.pub_id
+        ) AS book_status_summary ON book_status_summary.pub_id = publication.pub_id
+        ORDER BY publication.pub_id ASC";
 
 $result = mysqli_query($conn, $sql);
 ?>
@@ -98,6 +114,15 @@ $result = mysqli_query($conn, $sql);
                     <?php echo htmlspecialchars($row['pages']); ?>
                 </span>
             </div>
+
+            <div class="copies-line">
+                <?php echo (int) $row['total_copies'] > 0
+                    ? (int) $row['available_copies'] . ' of ' . (int) $row['total_copies'] . ' copies available'
+                    : 'No copies'; ?>
+            </div>
+            <span class="status <?php echo htmlspecialchars(strtolower($row['book_status'])); ?>">
+                <?php echo htmlspecialchars($row['book_status']); ?>
+            </span>
 
         </div>
 
