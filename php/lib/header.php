@@ -12,6 +12,9 @@ $navItems = [
     'policy.php' => 'Borrowing Policy',
     'reports.php' => 'Reports',
 ];
+if (($_SESSION['user_type'] ?? '') === 'Librarian') {
+    $navItems['staff.php'] = 'Staff';
+}
 ?>
 <header class="topbar">
     <div class="brand-navigation">

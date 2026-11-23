@@ -1,0 +1,76 @@
+.staff-scroll {
+    overflow-x: auto;
+    min-height: 150px;
+}
+
+.staff-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.staff-actions form {
+    margin: 0;
+}
+
+.btn-small {
+    padding: 7px 14px;
+    font-size: 12px;
+}
+
+.btn-small:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn-small:disabled:hover {
+    background: #fff;
+}
+
+.role-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.role-librarian {
+    background: #dbe8fa;
+    color: #003580;
+}
+
+.role-clerk {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.staff-dialog {
+    width: min(100% - 32px, 640px);
+}
+
+.staff-dialog-small {
+    width: min(100% - 32px, 440px);
+}
+
+.staff-dialog .field-group {
+    margin-bottom: 14px;
+}
+
+.staff-dialog .bp-grid .field-group {
+    margin-bottom: 0;
+}
+
+.staff-dialog .span-2 {
+    grid-column: 1 / -1;
+}
+
+.staff-dialog .page-note {
+    margin: 0 0 14px;
+}
+
+.staff-dialog .alert-danger {
+    margin-bottom: 14px;
+}

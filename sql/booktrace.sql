@@ -515,8 +515,8 @@ CREATE TABLE `library_staff` (
 --
 
 INSERT INTO `library_staff` (`libstaff_id`, `user_id`, `hire_date`, `duty_schedule`, `password`, `username`, `assigned_counter`) VALUES
-('LIB001', 100001, '2020-06-15', 'Monday-Friday 8:00am', 'pass1234', 'marksantos', NULL),
-('LIB002', 100002, '2020-08-14', 'Monday-Friday 8:00am', 'pass1235', 'jaycruz', NULL);
+('LIB001', 100001, '2020-06-15', 'Monday-Friday 8:00am', '$2y$10$Pxdh6WcDlocL4tDXDQgu7..MxAARCrlsOE0YkrbYuCnwqgWUcmi86', 'marksantos', NULL),
+('LIB002', 100002, '2020-08-14', 'Monday-Friday 8:00am', '$2y$10$SMEzZMlWjKZGl4C/X97hOeeNNSAk/2pLMlywPMBsfmDcFD/SulHcW', 'jaycruz', NULL);
 
 -- --------------------------------------------------------
 
@@ -1244,7 +1244,7 @@ ALTER TABLE `author`
 --
 ALTER TABLE `books`
   ADD UNIQUE KEY `uq_books_pub_id` (`pub_id`),
-  ADD UNIQUE KEY `ISBN` (`ISBN`),
+  ADD PRIMARY KEY (`ISBN`),
   ADD KEY `idx_books_created_at` (`created_at`),
   ADD KEY `idx_books_updated_at` (`updated_at`),
   ADD KEY `idx_books_acquired_at` (`acquired_at`),
@@ -1305,7 +1305,7 @@ ALTER TABLE `periodicals`
 -- Indexes for table `pub author`
 --
 ALTER TABLE `pub author`
-  ADD KEY `pub_id` (`pub_id`),
+  ADD PRIMARY KEY (`pub_id`, `author_id`),
   ADD KEY `author_id` (`author_id`);
 
 --

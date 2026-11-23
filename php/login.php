@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->fetch();
 
     if ($user) {
-        if ($password === $user['operational_password']) {
+        if ($user['operational_password'] !== null && password_verify($password, $user['operational_password'])) {
 
             session_regenerate_id(true);
 
