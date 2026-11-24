@@ -100,6 +100,42 @@ function dashboardPublicationIsAssigned(
         || dashboardValueExists($conn, $periodicalSql, $pubId, $excludePeriodicalIssn);
 }
 
+function dashboardCreateCopies(mysqli $conn, string $pubId, int $count, string $libstaffId): ?string
+{
+    try {
+        $copyResult = mysqli_query($conn, "SELECT COALESCE(MAX(CAST(SUBSTRING(copy_id, 5) AS UNSIGNED)), 0) FROM `pub copies` FOR UPDATE");
+        $lastCopy = (int) mysqli_fetch_row($copyResult)[0];
+        $statusResult = mysqli_query($conn, "SELECT COALESCE(MAX(CAST(status_id AS UNSIGNED)), 110000) FROM status FOR UPDATE");
+        $lastStatus = (int) mysqli_fetch_row($statusResult)[0];
+        $countStmt = mysqli_prepare($conn, "SELECT COUNT(*) FROM `pub copies` WHERE pub_id = ?");
+        mysqli_stmt_bind_param($countStmt, "s", $pubId);
+        mysqli_stmt_execute($countStmt);
+        mysqli_stmt_bind_result($countStmt, $existing);
+        mysqli_stmt_fetch($countStmt);
+        mysqli_stmt_close($countStmt);
+
+        $insertStatus = mysqli_prepare($conn, "INSERT INTO status (status_id, status_type, libstaff_id, `condition`) VALUES (?, 'Available', ?, 'Good')");
+        $insertCopy = mysqli_prepare($conn, "INSERT INTO `pub copies` (copy_id, pub_id, copy_number, status_id) VALUES (?, ?, ?, ?)");
+        mysqli_stmt_bind_param($insertStatus, "ss", $statusId, $libstaffId);
+        mysqli_stmt_bind_param($insertCopy, "ssis", $copyId, $pubId, $copyNumber, $statusId);
+
+        for ($i = 1; $i <= $count; $i++) {
+            $lastCopy++;
+            $lastStatus++;
+            $copyNumber = (int) $existing + $i;
+            $copyId = 'COPY' . str_pad((string) $lastCopy, 3, '0', STR_PAD_LEFT);
+            $statusId = (string) $lastStatus;
+            if (!mysqli_stmt_execute($insertStatus) || !mysqli_stmt_execute($insertCopy)) {
+                return "Error while creating copies: " . mysqli_error($conn);
+            }
+        }
+    } catch (mysqli_sql_exception $e) {
+        return "Error while creating copies: " . $e->getMessage();
+    }
+
+    return null;
+}
+
 function dashboardBookFormError(array $fields): ?string
 {
     $requiredFields = [
@@ -273,6 +309,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             'audience_type'
         );
         $bookFields['ISBN'] = $isbn;
+        $copies_input = dashboardPostValue('copies');
         $book_form_error = dashboardBookFormError($bookFields);
         $audience_type_error = $audience_type_choice === 'Other' && $audience_type === null
             ? 'Enter an audience type in the Other field.'
@@ -291,6 +328,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $add_message_class = "alert-danger";
         } elseif ($audience_type_error !== null) {
             $add_message = $audience_type_error;
+            $add_message_class = "alert-danger";
+        } elseif (filter_var($copies_input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 50]]) === false) {
+            $add_message = "Number of copies must be a whole number from 1 to 50.";
             $add_message_class = "alert-danger";
         } elseif (dashboardValueExists($conn, "SELECT 1 FROM publication WHERE pub_id = ?", $pub_id)) {
             $add_message = "Publication ID ($pub_id) is already in use. Enter a different ID.";
@@ -334,9 +374,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 mysqli_stmt_bind_param($insert_book, "ssssss", $pub_id, $class_no, $call_no, $isbn, $category, $audience_type);
 
                 if (mysqli_stmt_execute($insert_book)) {
-                    mysqli_commit($conn);
-                    $add_message = "Book added successfully.";
-                    $add_message_class = "alert-success";
+                    $copy_error = dashboardCreateCopies($conn, $pub_id, (int) $copies_input, current_libstaff_id());
+                    if ($copy_error === null) {
+                        mysqli_commit($conn);
+                        $add_message = "Book added successfully with " . (int) $copies_input . ((int) $copies_input === 1 ? " copy." : " copies.");
+                        $add_message_class = "alert-success";
+                    } else {
+                        mysqli_rollback($conn);
+                        $add_message = $copy_error;
+                        $add_message_class = "alert-danger";
+                    }
                 } else {
                     mysqli_rollback($conn);
                     $add_message = "Error while saving book details: " . mysqli_stmt_error($insert_book);
@@ -349,6 +396,36 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $add_message_class = "alert-danger";
             }
             mysqli_stmt_close($insert);
+        }
+    }
+
+    if (isset($_POST['add_copies'])) {
+        $copies_input = dashboardPostValue('copies');
+        if (!dashboardValueExists($conn, "SELECT 1 FROM publication WHERE pub_id = ?", $pub_id)) {
+            $copies_message = "Select a title before adding copies.";
+            $copies_message_class = "alert-danger";
+        } elseif (filter_var($copies_input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 50]]) === false) {
+            $copies_message = "Number of copies must be a whole number from 1 to 50.";
+            $copies_message_class = "alert-danger";
+        } else {
+            mysqli_begin_transaction($conn);
+            $copy_error = dashboardCreateCopies($conn, $pub_id, (int) $copies_input, current_libstaff_id());
+            if ($copy_error === null) {
+                mysqli_commit($conn);
+                $copies_message = (int) $copies_input . ((int) $copies_input === 1 ? " copy" : " copies") . " added to " . $pub_id . ".";
+                $copies_message_class = "alert-success";
+            } else {
+                mysqli_rollback($conn);
+                $copies_message = $copy_error;
+                $copies_message_class = "alert-danger";
+            }
+        }
+        if (($_GET['view'] ?? '') === 'periodicals') {
+            $periodical_message = $copies_message;
+            $periodical_message_class = $copies_message_class;
+        } else {
+            $add_message = $copies_message;
+            $add_message_class = $copies_message_class;
         }
     }
 
@@ -874,6 +951,10 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                     <small class="field-hint" id="add-book-isbn-hint">Include ISBN- at the start, e.g. ISBN-978-621-12-3456-7.</small>
                 </div>
                 <div class="form-field category-field">
+                    <label for="add-book-copies">Number of Copies</label>
+                    <input type="number" name="copies" id="add-book-copies" min="1" max="50" step="1" value="1" required>
+                </div>
+                <div class="form-field category-field">
                     <label for="add-book-category">Category</label>
                     <select name="category" id="add-book-category" required>
                         <option value="" disabled selected>Choose a category</option>
@@ -1175,8 +1256,33 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
             <div class="modal-actions">
                 <button type="button" class="modal-cancel" id="details-close-btn">Close</button>
                 <button type="button" class="submit-btn details-delete" id="details-delete-btn"><i class="bi bi-trash3-fill"></i> Delete</button>
+                <button type="button" class="submit-btn" id="details-add-copy-btn"><i class="bi bi-plus-lg"></i> Add Copy</button>
                 <button type="button" class="submit-btn" id="details-update-btn"><i class="bi bi-pencil-square"></i> Update</button>
             </div>
+        </section>
+    </div>
+
+    <div class="modal-overlay" id="add-copies-modal" aria-hidden="true">
+        <section class="update-modal details-modal" role="dialog" aria-modal="true" aria-labelledby="add-copies-title">
+            <div class="modal-header">
+                <div>
+                    <h2 id="add-copies-title">Add Copies</h2>
+                    <p id="add-copies-subtitle"></p>
+                </div>
+                <button type="button" class="modal-close" id="close-add-copies-modal" aria-label="Close">&times;</button>
+            </div>
+            <form method="POST" id="add-copies-form">
+                <input type="hidden" name="pub_id" id="add-copies-pub-id">
+                <input type="hidden" name="add_copies" value="1">
+                <div class="form-field category-field">
+                    <label for="add-copies-count">Number of Copies to Add</label>
+                    <input type="number" name="copies" id="add-copies-count" min="1" max="50" step="1" value="1" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-cancel" id="cancel-add-copies-modal">Cancel</button>
+                    <button type="submit" class="submit-btn"><i class="bi bi-plus-lg"></i> Add Copies</button>
+                </div>
+            </form>
         </section>
     </div>
 
@@ -1755,6 +1861,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const detailsSubtitle = document.getElementById("details-modal-subtitle");
     const detailsBody = document.getElementById("details-body");
     let detailsKind = "book";
+    let detailsRow = null;
 
     const detailsGroups = {
         book: [
@@ -1777,6 +1884,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function openDetails(kind, row) {
         detailsKind = kind;
+        detailsRow = row;
         detailsTitle.textContent = kind === "book" ? "Book Details" : "Periodical Details";
         detailsSubtitle.textContent = row.dataset.title || "";
         detailsBody.innerHTML = detailsGroups[kind].map(function(group) {
@@ -1834,6 +1942,25 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("details-delete-btn").addEventListener("click", function() {
         closeDetails();
         (detailsKind === "book" ? deleteButton : deletePeriodicalButton).click();
+    });
+    const addCopiesModal = document.getElementById("add-copies-modal");
+    document.getElementById("details-add-copy-btn").addEventListener("click", function() {
+        document.getElementById("add-copies-pub-id").value = detailsRow.dataset.pubid;
+        document.getElementById("add-copies-subtitle").textContent = detailsRow.dataset.title || "";
+        document.getElementById("add-copies-count").value = 1;
+        closeDetails();
+        openModal(addCopiesModal);
+    });
+    document.getElementById("close-add-copies-modal").addEventListener("click", function() {
+        closeModal(addCopiesModal);
+    });
+    document.getElementById("cancel-add-copies-modal").addEventListener("click", function() {
+        closeModal(addCopiesModal);
+    });
+    addCopiesModal.addEventListener("click", function(event) {
+        if (event.target === addCopiesModal) {
+            closeModal(addCopiesModal);
+        }
     });
     detailsModal.addEventListener("click", function(event) {
         if (event.target === detailsModal) {
