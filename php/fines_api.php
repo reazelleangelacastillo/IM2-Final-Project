@@ -5,6 +5,7 @@ $action = requestAction();
 
 try {
     if ($action === 'summary') {
+        syncOverdueFineRecords();
         $rows = $pdo->query('SELECT status, COUNT(*) AS cnt, COALESCE(SUM(amount), 0) AS total FROM fines GROUP BY status')->fetchAll();
         $summary = [
             'unpaid_count' => 0, 'unpaid_total' => 0.0,
@@ -25,6 +26,7 @@ try {
     }
 
     if ($action === 'list') {
+        syncOverdueFineRecords();
         $filter = $_GET['status'] ?? 'All';
         $q = is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '';
         $sql = '
@@ -56,6 +58,7 @@ try {
     }
 
     if ($action === 'overdue') {
+        syncOverdueFineRecords();
         $rows = $pdo->query('
             SELECT transaction_id, borrower_id, borrower_name, copy_id, title, due_date, hours_late, live_fine
             FROM v_overdue_borrows
@@ -69,6 +72,27 @@ try {
         $fineId = postText('fine_id');
         if ($fineId === '') {
             respond(['ok' => false, 'error' => 'Required field missing.']);
+        }
+        if (strncmp($fineId, 'OVD-', 4) === 0) {
+            $borrowId = substr($fineId, 4);
+            if ($borrowId === '') {
+                respond(['ok' => false, 'error' => 'Required field missing.']);
+            }
+            syncOverdueFineRecords();
+            $fineStmt = $pdo->prepare('
+                SELECT f.fine_id
+                FROM fines f
+                JOIN borrows b ON b.borrow_id = f.borrow_id
+                WHERE f.borrow_id = ? AND f.status = \'Unpaid\' AND b.date_returned IS NULL
+                ORDER BY f.date_assessed DESC, f.fine_id DESC
+                LIMIT 1
+            ');
+            $fineStmt->execute([$borrowId]);
+            $persistedFineId = $fineStmt->fetchColumn();
+            if ($persistedFineId === false) {
+                respond(['ok' => false, 'error' => 'No unpaid overdue fine was found.']);
+            }
+            $fineId = (string) $persistedFineId;
         }
         $stmt = $pdo->prepare('CALL sp_pay_fine(?)');
         $stmt->execute([$fineId]);

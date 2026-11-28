@@ -407,6 +407,10 @@ body {
     border: 0;
 }
 
+.availability-action {
+    margin-top: 8px;
+}
+
 .status-toggle-label {
     display: block;
     margin-bottom: 4px;

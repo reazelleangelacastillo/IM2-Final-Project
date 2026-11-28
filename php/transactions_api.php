@@ -41,12 +41,23 @@ try {
     }
 
     if ($action === 'active') {
+        syncOverdueFineRecords();
         $id = is_string($_GET['borrower_id'] ?? null) ? trim($_GET['borrower_id']) : '';
         $sql = '
             SELECT b.borrow_id, br.borrower_id, CONCAT(u.user_fname, \' \', u.user_lname) AS borrower_name,
                    b.copy_id, p.title, b.due_date,
-                   fn_hours_late(b.due_date, NOW()) AS hours_late,
-                   fn_calc_fine(b.due_date, NOW(), bp.fine_rate_per_hour) AS fine_now
+                   GREATEST(
+                       fn_hours_late(b.due_date, NOW()) -
+                       COALESCE((SELECT SUM(f.hours_late) FROM fines f
+                                 WHERE f.borrow_id = b.borrow_id AND f.status = \'Paid\'), 0),
+                       0
+                   ) AS hours_late,
+                   GREATEST(
+                       fn_hours_late(b.due_date, NOW()) -
+                       COALESCE((SELECT SUM(f.hours_late) FROM fines f
+                                 WHERE f.borrow_id = b.borrow_id AND f.status = \'Paid\'), 0),
+                       0
+                   ) * bp.fine_rate_per_hour AS fine_now
             FROM borrows b
             JOIN borrower br ON br.user_id = b.user_id
             JOIN `user` u ON u.user_id = b.user_id

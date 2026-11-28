@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/lib/auth.php';
-$host = "localhost";
+$host = "127.0.0.1";
 $user = "root";
 $password = "";
 $database = "booktrace";
@@ -132,6 +132,51 @@ function dashboardCreateCopies(mysqli $conn, string $pubId, int $count, string $
     } catch (mysqli_sql_exception $e) {
         return "Error while creating copies: " . $e->getMessage();
     }
+
+    return null;
+}
+
+function dashboardMakePublicationAvailable(mysqli $conn, string $pubId): ?string
+{
+    $copyStmt = mysqli_prepare($conn, "
+        SELECT s.status_id
+        FROM `pub copies` pc
+        JOIN status s ON s.status_id = pc.status_id
+        WHERE pc.pub_id = ?
+          AND s.status_type = 'Under Maintenance'
+          AND s.`condition` = 'Good'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM borrows b
+              WHERE b.copy_id = pc.copy_id
+                AND b.date_returned IS NULL
+          )
+        ORDER BY pc.copy_number, pc.copy_id
+        LIMIT 1
+        FOR UPDATE
+    ");
+    mysqli_stmt_bind_param($copyStmt, "s", $pubId);
+    if (!mysqli_stmt_execute($copyStmt)) {
+        $error = mysqli_stmt_error($copyStmt);
+        mysqli_stmt_close($copyStmt);
+        return "Could not make the book available: $error";
+    }
+
+    mysqli_stmt_bind_result($copyStmt, $statusId);
+    if (!mysqli_stmt_fetch($copyStmt)) {
+        mysqli_stmt_close($copyStmt);
+        return 'No non-borrowed copy in good condition can be made available.';
+    }
+    mysqli_stmt_close($copyStmt);
+
+    $statusStmt = mysqli_prepare($conn, "UPDATE status SET status_type = 'Available' WHERE status_id = ?");
+    mysqli_stmt_bind_param($statusStmt, "s", $statusId);
+    if (!mysqli_stmt_execute($statusStmt)) {
+        $error = mysqli_stmt_error($statusStmt);
+        mysqli_stmt_close($statusStmt);
+        return "Could not make the book available: $error";
+    }
+    mysqli_stmt_close($statusStmt);
 
     return null;
 }
@@ -279,6 +324,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $category = dashboardPostValue('category');
     $audience_type_choice = dashboardPostValue('audience_type_choice');
     $audience_type_custom = dashboardPostValue('audience_type_custom');
+    $make_available = dashboardPostValue('make_available') === '1';
     $audience_type_options = ['Students', 'Teachers', 'Researchers', 'Professionals', 'General Public'];
     if (in_array($audience_type_choice, $audience_type_options, true)) {
         $audience_type = $audience_type_choice;
@@ -618,9 +664,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 mysqli_stmt_bind_param($update_book, "ssssss", $class_no, $call_no, $isbn, $category, $audience_type, $pub_id);
 
                 if (mysqli_stmt_execute($update_book)) {
-                    mysqli_commit($conn);
-                    $publication_message = "Book updated successfully.";
-                    $publication_message_class = "alert-success";
+                    $availability_error = $make_available
+                        ? dashboardMakePublicationAvailable($conn, $pub_id)
+                        : null;
+                    if ($availability_error === null) {
+                        mysqli_commit($conn);
+                        $publication_message = $make_available
+                            ? "Book updated and one copy marked Available."
+                            : "Book updated successfully.";
+                        $publication_message_class = "alert-success";
+                    } else {
+                        mysqli_rollback($conn);
+                        $publication_message = $availability_error;
+                        $publication_message_class = "alert-danger";
+                    }
                 } else {
                     mysqli_rollback($conn);
                     $publication_message = "Error while updating book details: " . mysqli_stmt_error($update_book);
@@ -1195,6 +1252,10 @@ while ($publication_option = mysqli_fetch_assoc($publication_options_result)) {
                         <span class="status-switch-indicator" aria-hidden="true"></span>
                         <span class="status-switch-label" data-status-label>Available</span>
                     </div>
+                    <button type="button" class="modal-cancel availability-action" id="modal-make-available" hidden>
+                        Make one copy available
+                    </button>
+                    <input type="hidden" name="make_available" id="modal_make_available" value="0">
                 </div>
                 <input type="text" name="class_no" id="modal_class_no" placeholder="Class No." maxlength="50" required>
                 <input type="text" name="call_no" id="modal_call_no" placeholder="Call No." maxlength="50" required>
@@ -1605,6 +1666,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const deletePeriodicalIssn = document.getElementById("delete-periodical-issn");
     const updateButton = document.getElementById("open-update-modal");
     const updateModal = document.getElementById("update-modal");
+    const makeAvailableButton = document.getElementById("modal-make-available");
+    const makeAvailableInput = document.getElementById("modal_make_available");
     const closeModalButton = document.getElementById("close-update-modal");
     const cancelModalButton = document.getElementById("cancel-update-modal");
     const deleteButton = document.getElementById("delete-publication-button");
@@ -1748,6 +1811,12 @@ document.addEventListener("DOMContentLoaded", function() {
         closeModal(updateModal);
     }
 
+    makeAvailableButton.addEventListener("click", function() {
+        makeAvailableInput.value = "1";
+        setStatusDisplay(document.getElementById("modal_status"), "Available");
+        makeAvailableButton.hidden = true;
+    });
+
     function closeSelectionWarningModal() {
         selectionWarningModal.classList.remove("is-open");
         selectionWarningModal.setAttribute("aria-hidden", "true");
@@ -1788,7 +1857,10 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("modal_audience_type_custom"),
             selectedRow.dataset.audienceType
         );
-        setStatusDisplay(document.getElementById("modal_status"), selectedRow.dataset.status);
+        const bookStatus = selectedRow.dataset.status;
+        setStatusDisplay(document.getElementById("modal_status"), bookStatus);
+        makeAvailableInput.value = "0";
+        makeAvailableButton.hidden = String(bookStatus).toLowerCase() !== "unavailable";
         document.getElementById("modal_original_pub_id").value = selectedRow.dataset.pubid;
 
         const copyrightValue = selectedRow.dataset.copyright;

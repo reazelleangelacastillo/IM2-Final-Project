@@ -31,11 +31,19 @@
 
     async function getJson(params) {
         const res = await fetch(api + '?' + new URLSearchParams(params), { credentials: 'same-origin' });
+        if (res.redirected && new URL(res.url).pathname.toLowerCase().endsWith('/login.php')) {
+            window.location.assign(res.url);
+            return null;
+        }
         return res.json();
     }
 
     async function postJson(data) {
         const res = await fetch(api, { method: 'POST', body: new URLSearchParams(data), credentials: 'same-origin' });
+        if (res.redirected && new URL(res.url).pathname.toLowerCase().endsWith('/login.php')) {
+            window.location.assign(res.url);
+            return null;
+        }
         return res.json();
     }
 

@@ -14,7 +14,10 @@ window.helpers = {
     },
 
     peso(value) {
-        return '₱' + Number(value).toFixed(2);
+        return '₱' + Number(value).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
     },
 
     show(box, text, kind) {

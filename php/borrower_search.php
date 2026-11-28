@@ -159,6 +159,7 @@ if ($action === 'search') {
     if ($q === '') {
         respond(['exact' => null, 'results' => []]);
     }
+    syncOverdueFineRecords();
 
     $id = normalizeBorrowerId($q);
     if ($id !== null) {
@@ -187,6 +188,7 @@ if ($action === 'search') {
 }
 
 if ($action === 'card') {
+    syncOverdueFineRecords();
     $card = borrowerCard($pdo, trim((string) ($_GET['id'] ?? '')));
     if ($card === null) {
         respond(['ok' => false, 'error' => 'Borrower not found.']);

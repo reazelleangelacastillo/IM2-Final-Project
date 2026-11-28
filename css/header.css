@@ -23,38 +23,195 @@
 .brand-navigation {
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 16px;
+}
+
+.navigation-menu {
+    position: relative;
+}
+
+.navigation-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 62px;
+    padding: 7px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    list-style: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.navigation-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.navigation-toggle::marker {
+    content: "";
+}
+
+.navigation-toggle:hover,
+.navigation-toggle:focus-visible,
+.navigation-menu[open] > .navigation-toggle {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.navigation-toggle:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+}
+
+.book-stack-icon {
+    position: relative;
+    display: block;
+    width: 46px;
+    height: 25px;
+}
+
+.book-stack-icon::before {
+    position: absolute;
+    inset: 0 1px 1px;
+    border-bottom: 2px solid currentColor;
+    border-radius: 2px;
+    content: "";
+    opacity: 0.9;
+}
+
+.book-stack-icon span {
+    position: absolute;
+    bottom: 3px;
+    width: 7px;
+    border: 1px solid currentColor;
+    border-radius: 2px 2px 1px 1px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.06));
+    box-shadow: inset 1px 0 rgba(255, 255, 255, 0.2);
+    transform-origin: center;
+    translate: 0 0;
+    rotate: 0deg;
+    transition: translate 0.32s ease, rotate 0.32s ease;
+}
+
+.book-stack-icon span:nth-child(1) {
+    left: 9.5px;
+    height: 15px;
+    color: #d7e9ff;
+}
+
+.book-stack-icon span:nth-child(2) {
+    left: 19.5px;
+    height: 15px;
+    color: #f3d28d;
+}
+
+.book-stack-icon span:nth-child(3) {
+    left: 29.5px;
+    height: 10px;
+    color: #c4e3d3;
+}
+
+.book-stack-icon span::before {
+    position: absolute;
+    top: 3px;
+    right: 1px;
+    left: 1px;
+    border-top: 1px solid rgba(255, 255, 255, 0.75);
+    content: "";
+}
+
+.book-stack-icon span::after {
+    position: absolute;
+    right: 1px;
+    bottom: 2px;
+    left: 1px;
+    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    content: "";
+}
+
+.navigation-menu[open] .book-stack-icon span:nth-child(1) {
+    translate: -4.5px 4.5px;
+    rotate: 90deg;
+    transition-delay: 0.24s;
+}
+
+.navigation-menu[open] .book-stack-icon span:nth-child(2) {
+    translate: 2.5px 4.5px;
+    rotate: 90deg;
+    transition-delay: 0.12s;
+}
+
+.navigation-menu[open] .book-stack-icon span:nth-child(3) {
+    translate: 7px 2px;
+    rotate: 90deg;
 }
 
 .table-navigation {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 101;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+    width: min(272px, calc(100vw - 32px));
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 16px 36px rgba(0, 25, 70, 0.2);
+}
+
+.navigation-heading {
+    margin: 0 0 4px;
+    padding: 4px 10px 9px;
+    border-bottom: 1px solid #edf1f6;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
 }
 
 .table-navigation a {
-    color: #fff;
+    color: #003580;
+    width: 100%;
     text-decoration: none;
-    font-size: 14px;
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 13px;
     font-weight: 600;
-    padding: 9px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 .table-navigation a:hover,
 .table-navigation a:focus-visible {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.65);
+    border-color: #e2eaf5;
+    background: #f0f5ff;
+    color: #002b65;
 }
 
 .table-navigation a.active {
-    background: #fff;
+    background: #edf4ff;
     color: #003580;
-    border-color: #fff;
+    border-color: #d8e6fb;
+}
+
+.table-navigation a:focus-visible {
+    outline: 2px solid #4d86d8;
+    outline-offset: 1px;
 }
 
 .logo-section h1 {
@@ -109,18 +266,14 @@
         padding: 16px 20px;
     }
 
-    .brand-navigation {
-        gap: 16px;
-        flex-wrap: wrap;
-    }
-
-    .table-navigation {
-        gap: 6px;
+    .navigation-toggle {
+        min-width: 58px;
+        padding: 7px 7px;
     }
 
     .table-navigation a {
-        padding: 8px 12px;
-        font-size: 13px;
+        min-height: 44px;
+        padding: 10px 11px;
     }
 }
 
@@ -145,6 +298,11 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .book-stack-icon span {
+        transition-duration: 0.01ms;
+        transition-delay: 0ms !important;
+    }
+
     .page-container,
     .dashboard-container,
     .dashboard-wrapper {

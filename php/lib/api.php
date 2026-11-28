@@ -32,3 +32,10 @@ function exceptionMessage(PDOException $e): string
 {
     return ($e->errorInfo[0] ?? '') === '45000' ? $e->errorInfo[2] : 'Could not save. Please try again.';
 }
+
+function syncOverdueFineRecords(): void
+{
+    global $pdo;
+    $stmt = $pdo->query('CALL sp_sync_overdue_fines()');
+    $stmt->closeCursor();
+}

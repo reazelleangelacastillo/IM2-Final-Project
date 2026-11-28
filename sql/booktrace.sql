@@ -515,8 +515,8 @@ CREATE TABLE `library_staff` (
 --
 
 INSERT INTO `library_staff` (`libstaff_id`, `user_id`, `hire_date`, `duty_schedule`, `password`, `username`, `assigned_counter`) VALUES
-('LIB001', 100001, '2020-06-15', 'Monday-Friday 8:00am', '$2y$10$Pxdh6WcDlocL4tDXDQgu7..MxAARCrlsOE0YkrbYuCnwqgWUcmi86', 'marksantos', NULL),
-('LIB002', 100002, '2020-08-14', 'Monday-Friday 8:00am', '$2y$10$SMEzZMlWjKZGl4C/X97hOeeNNSAk/2pLMlywPMBsfmDcFD/SulHcW', 'jaycruz', NULL);
+('LIB001', 100001, '2020-06-15', 'Monday-Friday 8:00am', '$2y$10$OCJdgeHAxVBO9LwVqWkFa.z2rQPSFZKQhHnmymHQlgLhgbRDJbqQy', 'marksantos', NULL),
+('LIB002', 100002, '2020-08-14', 'Monday-Friday 8:00am', '$2y$10$.9Mho2eW7TNEDXF7LwIy..LpPi2qKGClZu1NufBtlk8YryxvcXiJ.', 'jaycruz', NULL);
 
 -- --------------------------------------------------------
 
@@ -1665,7 +1665,7 @@ BEGIN
       SELECT COALESCE(MAX(CAST(SUBSTRING(`fine_id`, 3) AS UNSIGNED)), 0) + 1 INTO v_next FROM `fines` FOR UPDATE;
       INSERT INTO `fines` (`fine_id`, `libstaff_id`, `borrow_id`, `amount`, `hours_late`, `rate_applied`, `date_assessed`, `status`, `date_paid`)
         VALUES (CONCAT('FN', LPAD(v_next, 3, '0')), COALESCE(@return_staff_id, NEW.`libstaff_id`), NEW.`borrow_id`,
-                fn_calc_fine(NEW.`due_date`, NEW.`date_returned`, v_rate), v_hours, v_rate, NOW(), 'Unpaid', NULL);
+                fn_calc_fine(NEW.`due_date`, NEW.`date_returned`, v_rate), v_hours, v_rate, NEW.`due_date`, 'Unpaid', NULL);
     END IF;
   END IF;
 END$$

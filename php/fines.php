@@ -15,7 +15,7 @@ $pageStyles = ['fines.css'];
 <main class="page-container">
     <section class="card">
         <h2 class="page-title">Fines</h2>
-        <p class="page-note">Fines are recorded when an overdue book is returned.</p>
+        <p class="page-note">Accrued overdue balances can be paid here while a book is still out. Any remaining late time is assessed when it is returned.</p>
         <div class="summary-grid" id="summary-grid"></div>
     </section>
 
@@ -37,14 +37,14 @@ $pageStyles = ['fines.css'];
 
     <section class="card">
         <h2 class="page-title">Overdue Now</h2>
-        <p class="page-note">Books overdue and not yet returned. These are not fines yet. A fine is recorded when the book is returned.</p>
+        <p class="page-note">Current unpaid balance for books not yet returned. Any additional late time continues to accrue.</p>
         <div class="table-wrap" id="overdue-list"></div>
     </section>
 </main>
 
 <?php require __DIR__ . '/lib/confirm_dialog.php'; ?>
 
-<script src="../js/fines.js"></script>
+<script src="../js/fines.js?v=20261127-persisted-overdue-fines"></script>
 
 </body>
 </html>
